@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Home from "./pages/Home";
 import Products from "./pages/products";
 import ProductPage from "./pages/productPage";
+import FAQPage from "./pages/faq";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import { SessionProvider } from "./components/Context/SessionContext";
@@ -18,6 +19,7 @@ export default function App() {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/products" element={<Products />} />
+              <Route path="/faq" element={<FAQPage />} />
               <Route path="/product/:id" element={<ProductPageWrapper />} /> {/* Ruta dinámica */}
             </Routes>
           </main>
