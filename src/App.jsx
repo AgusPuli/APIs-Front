@@ -3,6 +3,7 @@ import Home from "./pages/Home";
 import Products from "./pages/products";
 import ProductPage from "./pages/productPage";
 import FAQPage from "./pages/faq";
+import ContactPage from "./pages/contact";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import { SessionProvider } from "./components/Context/SessionContext";
@@ -20,6 +21,7 @@ export default function App() {
               <Route path="/" element={<Home />} />
               <Route path="/products" element={<Products />} />
               <Route path="/faq" element={<FAQPage />} />
+              <Route path="/contact" element={<ContactPage />} />
               <Route path="/product/:id" element={<ProductPageWrapper />} /> {/* Ruta dinámica */}
             </Routes>
           </main>
