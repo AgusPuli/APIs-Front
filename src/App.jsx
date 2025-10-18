@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useParams } from "react-router-dom";
 import Home from "./pages/Home";
 import Products from "./pages/products";
 import ProductPage from "./pages/productPage";
@@ -8,7 +8,9 @@ import Header from "./components/Header";
 import Footer from "./components/Footer";
 import { SessionProvider } from "./components/Context/SessionContext";
 import { CartProvider } from "./components/Context/CartContext";
-import './index.css'
+import { Toaster } from "react-hot-toast"; // ✅ para mostrar mensajes
+import Login from "./pages/Login"; // ✅ tu nueva página de login
+import "./index.css";
 
 export default function App() {
   return (
@@ -23,9 +25,11 @@ export default function App() {
               <Route path="/faq" element={<FAQPage />} />
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/product/:id" element={<ProductPageWrapper />} /> {/* Ruta dinámica */}
+              <Route path="/login" element={<Login />} /> {/* ✅ Ruta de login */}
             </Routes>
           </main>
           <Footer />
+          <Toaster position="top-right" /> {/* ✅ Necesario para toast.success/error */}
         </BrowserRouter>
       </CartProvider>
     </SessionProvider>
@@ -33,7 +37,6 @@ export default function App() {
 }
 
 // Wrapper para pasar el id de la URL como prop a ProductPage
-import { useParams } from "react-router-dom";
 function ProductPageWrapper() {
   const { id } = useParams();
   return <ProductPage productId={id} />;
