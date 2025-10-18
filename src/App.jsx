@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Home from "./pages/Home";
+import Products from "./pages/products";
+import ProductPage from "./pages/productPage";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import { SessionProvider } from "./components/Context/SessionContext";
@@ -15,6 +17,8 @@ export default function App() {
           <main className="min-h-screen">
             <Routes>
               <Route path="/" element={<Home />} />
+              <Route path="/products" element={<Products />} />
+              <Route path="/product/:id" element={<ProductPageWrapper />} /> {/* Ruta dinámica */}
             </Routes>
           </main>
           <Footer />
@@ -22,4 +26,11 @@ export default function App() {
       </CartProvider>
     </SessionProvider>
   );
+}
+
+// Wrapper para pasar el id de la URL como prop a ProductPage
+import { useParams } from "react-router-dom";
+function ProductPageWrapper() {
+  const { id } = useParams();
+  return <ProductPage productId={id} />;
 }

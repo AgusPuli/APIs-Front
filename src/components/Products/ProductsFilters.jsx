@@ -1,23 +1,23 @@
 import React from "react";
 
 export default function ProductFilters({
-  products,
+  products = [],
   selectedCategory,
   setSelectedCategory,
   selectedSubcategory,
   setSelectedSubcategory,
 }) {
-  // categorías únicas
+  // Categorías únicas
   const categories = Array.from(
-    new Set(products.map((p) => p.category).filter(Boolean))
+    new Set((products || []).map((p) => p.category).filter(Boolean))
   );
 
-  // subcategorías según categoría seleccionada
+  // Subcategorías según categoría seleccionada
   const subcategories =
-    selectedCategory && products.length
+    selectedCategory && (products || []).length
       ? Array.from(
           new Set(
-            products
+            (products || [])
               .filter((p) => p.category === selectedCategory && p.subcategories)
               .flatMap((p) => p.subcategories)
           )
