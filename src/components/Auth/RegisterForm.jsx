@@ -15,45 +15,45 @@ export default function RegisterForm() {
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (password !== confirmPassword) {
-      toast.error("Las contraseñas no coinciden");
-      return;
+  if (password !== confirmPassword) {
+    toast.error("Las contraseñas no coinciden");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const response = await fetch("http://localhost:8080/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ firstName, lastName, email, password }),
+    });
+
+    if (!response.ok) {
+      let errorMsg = "Error al registrarse";
+      try {
+        const errorData = await response.json();
+        errorMsg = errorData.message || errorMsg;
+      } catch {}
+      throw new Error(errorMsg);
     }
 
-    setLoading(true);
+    const data = await response.json();
 
-    try {
-      const response = await fetch("http://localhost:8080/api/users/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ firstName, lastName, email, password }),
-      });
+    // ✅ usar el campo correcto
+    login(data.access_token);
 
-      if (!response.ok) {
-        let errorMsg = "Error al registrarse";
-        try {
-          const errorData = await response.json();
-          errorMsg = errorData.message || errorMsg;
-        } catch {}
-        throw new Error(errorMsg);
-      }
+    toast.success("Usuario registrado correctamente");
+    navigate("/");
+  } catch (err) {
+    toast.error(err.message || "Error en el registro");
+  } finally {
+    setLoading(false);
+  }
+};
 
-      const data = await response.json();
-
-      login(data.token);
-
-      toast.success("Usuario registrado correctamente");
-
-      if (data.type === "ADMIN") navigate("/admin");
-      else navigate("/user");
-    } catch (err) {
-      toast.error(err.message || "Error en el registro");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <form onSubmit={handleSubmit} className="mt-8 space-y-6">

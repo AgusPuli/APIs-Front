@@ -12,43 +12,40 @@ export default function LoginForm() {
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+  e.preventDefault();
+  setLoading(true);
 
-    console.log("Enviando login:", { email, password });
+  try {
+    const response = await fetch("http://localhost:8080/auth/authenticate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
 
-    try {
-      const response = await fetch("http://localhost:8080/api/users/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!response.ok) {
-        let errorMsg = "Credenciales incorrectas";
-        try {
-          const errorData = await response.json();
-          errorMsg = errorData.message || errorMsg;
-        } catch {}
-        throw new Error(errorMsg);
-      }
-
-      const data = await response.json();
-
-      // Guardar token en contexto global
-      login(data.token);
-
-      toast.success("Inicio de sesión exitoso");
-
-      // Redirigir según rol
-      if (data.type === "ADMIN") navigate("/admin");
-      else navigate("/user");
-    } catch (err) {
-      toast.error(err.message || "Error al iniciar sesión");
-    } finally {
-      setLoading(false);
+    if (!response.ok) {
+      let errorMsg = "Credenciales incorrectas";
+      try {
+        const errorData = await response.json();
+        errorMsg = errorData.message || errorMsg;
+      } catch {}
+      throw new Error(errorMsg);
     }
-  };
+
+    const data = await response.json();
+
+    // ✅ usar el campo correcto del backend
+    login(data.access_token);
+
+    toast.success("Inicio de sesión exitoso");
+
+    navigate("/"); // redirige al home o al panel según prefieras
+  } catch (err) {
+    toast.error(err.message || "Error al iniciar sesión");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <form onSubmit={handleSubmit} className="mt-8 space-y-6">

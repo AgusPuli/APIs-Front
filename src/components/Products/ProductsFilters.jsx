@@ -25,13 +25,17 @@ export default function ProductFilters({
       : [];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6 bg-gray-50 dark:bg-gray-800 p-5 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
       <div>
-        <h3 className="font-semibold text-gray-800 dark:text-white mb-2">
+        <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
           Categoría
         </h3>
         <select
-          className="w-full rounded border-gray-300 dark:border-gray-700 bg-background-light dark:bg-background-dark p-2 text-sm sm:text-base"
+          className="w-full rounded-lg border border-gray-300 dark:border-gray-600 
+                     bg-white dark:bg-gray-900 
+                     text-gray-800 dark:text-gray-100 
+                     p-2.5 text-sm sm:text-base 
+                     focus:outline-none focus:ring-2 focus:ring-blue-500"
           value={selectedCategory}
           onChange={(e) => setSelectedCategory(e.target.value)}
         >
@@ -46,11 +50,15 @@ export default function ProductFilters({
 
       {subcategories.length > 0 && (
         <div>
-          <h3 className="font-semibold text-gray-800 dark:text-white mb-2">
+          <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
             Subcategoría
           </h3>
           <select
-            className="w-full rounded border-gray-300 dark:border-gray-700 bg-background-light dark:bg-background-dark p-2 text-sm sm:text-base"
+            className="w-full rounded-lg border border-gray-300 dark:border-gray-600 
+                       bg-white dark:bg-gray-900 
+                       text-gray-800 dark:text-gray-100 
+                       p-2.5 text-sm sm:text-base 
+                       focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={selectedSubcategory}
             onChange={(e) => setSelectedSubcategory(e.target.value)}
           >

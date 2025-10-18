@@ -94,7 +94,7 @@ export default function ProductPage() {
   // ✅ Render principal
   return (
     <div className="bg-gray-50 dark:bg-gray-900 min-h-screen">
-      <Header />
+      
       <section className="py-16 sm:py-20">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 lg:flex lg:gap-12">
           {/* Galería de imágenes */}

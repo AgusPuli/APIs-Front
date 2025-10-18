@@ -2,6 +2,7 @@
 import { useMemo, useEffect } from "react";
 import ProductCard from "./ProductCard";
 import ProductFilters from "./ProductsFilters";
+import SearchBar from "../Header/SearchBar";
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 
 export default function ProductsList({
@@ -21,19 +22,27 @@ export default function ProductsList({
     setCurrentPage(1);
   }, [searchQuery, selectedCategory, selectedSubcategory, setCurrentPage]);
 
-  // Filtrado de productos
+  // 🔍 Filtrado de productos
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
-      const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = selectedCategory ? p.category === selectedCategory : true;
+      const matchesSearch =
+        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.category?.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesCategory = selectedCategory
+        ? p.category === selectedCategory
+        : true;
+
       const matchesSubcategory = selectedSubcategory
         ? p.subcategories?.includes(selectedSubcategory)
         : true;
+
       return matchesSearch && matchesCategory && matchesSubcategory;
     });
   }, [products, searchQuery, selectedCategory, selectedSubcategory]);
 
-  // Paginación
+  // 📄 Paginación
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / itemsPerPage));
   const paginatedProducts = filteredProducts.slice(
     (currentPage - 1) * itemsPerPage,
@@ -47,19 +56,29 @@ export default function ProductsList({
     <section className="py-8 sm:py-12">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         
-        {/* Header con título y resultados */}
-        <div className="mb-8">
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-2">
-            Nuestros Productos
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            {filteredProducts.length} {filteredProducts.length === 1 ? 'producto encontrado' : 'productos encontrados'}
-          </p>
+        {/* 🔹 Header con título, buscador y contador */}
+        <div className="mb-8 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-2">
+              Nuestros Productos
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              {filteredProducts.length}{" "}
+              {filteredProducts.length === 1
+                ? "producto encontrado"
+                : "productos encontrados"}
+            </p>
+          </div>
+
+          {/* 🔍 SearchBar (buscador de productos) */}
+          <div className="w-full lg:w-72">
+            <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+          </div>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-8">
           
-          {/* Filtros de escritorio */}
+          {/* 🧭 Filtros de escritorio */}
           <aside className="hidden lg:block w-64 flex-shrink-0">
             <div className="sticky top-24">
               <ProductFilters
@@ -72,10 +91,9 @@ export default function ProductsList({
             </div>
           </aside>
 
-          {/* Contenido principal */}
+          {/* 🛒 Contenido principal */}
           <div className="flex-1">
-            
-            {/* Filtros móviles - puedes agregar un dropdown aquí */}
+            {/* Filtros móviles */}
             <div className="lg:hidden mb-6">
               <ProductFilters
                 products={products}
@@ -96,8 +114,18 @@ export default function ProductsList({
             ) : (
               <div className="text-center py-16">
                 <div className="mb-4">
-                  <svg className="w-24 h-24 mx-auto text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <svg
+                    className="w-24 h-24 mx-auto text-gray-300 dark:text-gray-600"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
                   </svg>
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
@@ -112,23 +140,23 @@ export default function ProductsList({
                     setSelectedCategory("");
                     setSelectedSubcategory("");
                   }}
-                  className="btn-primary"
+                  className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-all"
                 >
                   Limpiar filtros
                 </button>
               </div>
             )}
 
-            {/* Controles de paginación */}
+            {/* 📑 Paginación */}
             {totalPages > 1 && paginatedProducts.length > 0 && (
               <div className="mt-12 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-gray-200 dark:border-gray-700 pt-6">
                 
-                {/* Info de página */}
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Mostrando {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, filteredProducts.length)} de {filteredProducts.length} productos
+                  Mostrando {((currentPage - 1) * itemsPerPage) + 1} -{" "}
+                  {Math.min(currentPage * itemsPerPage, filteredProducts.length)} de{" "}
+                  {filteredProducts.length} productos
                 </p>
 
-                {/* Botones de navegación */}
                 <div className="flex items-center gap-2">
                   <button
                     onClick={handlePrev}
@@ -139,7 +167,6 @@ export default function ProductsList({
                     <span className="hidden sm:inline">Anterior</span>
                   </button>
 
-                  {/* Números de página */}
                   <div className="flex items-center gap-1">
                     {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                       let pageNum;
