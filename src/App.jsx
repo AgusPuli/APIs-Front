@@ -7,6 +7,7 @@ import FAQPage from "./pages/faq";
 import ContactPage from "./pages/contact";
 import Login from "./pages/Login";
 import Admin from "./pages/admin";
+import Cart from "./pages/cart";
 
 import Header from "./components/Header";
 import Footer from "./components/Footer";
@@ -49,6 +50,8 @@ function AppLayout() {
 
           {/* 👨‍💼 Panel de administración */}
           <Route path="/admin" element={<Admin />} />
+
+          <Route path="/cart" element={<Cart />} />
         </Routes>
       </main>
 
