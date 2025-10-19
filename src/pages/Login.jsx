@@ -8,15 +8,7 @@ export default function Login() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background-light dark:bg-background-dark font-display">
-      <Header
-        searchQuery=""
-        setSearchQuery={() => {}}
-        selectedCategory=""
-        setSelectedCategory={() => {}}
-        selectedSubcategory=""
-        setSelectedSubcategory={() => {}}
-        products={[]}
-      />
+      
 
       <main className="flex flex-1 items-center justify-center">
         <div className="w-full max-w-md p-8 space-y-6">
