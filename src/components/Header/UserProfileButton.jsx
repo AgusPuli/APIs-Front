@@ -21,8 +21,13 @@ export default function UserProfileButton() {
 
   const handleDashboardClick = () => {
     if (!user) return;
-    if (user.type === "ADMIN") navigate("/admin");
-    else navigate("/user");
+
+    // ✅ Ahora verificamos por el rol que viene del token
+    if (user.role === "ADMIN") {
+      navigate("/admin");
+    } else {
+      navigate("/user");
+    }
   };
 
   return (
