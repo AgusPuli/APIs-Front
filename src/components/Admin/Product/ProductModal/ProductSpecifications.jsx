@@ -1,4 +1,3 @@
-// src/components/Admin/Product/ProductModal/ProductSpecifications.jsx
 import { useState, useEffect } from "react";
 import { FiPlus, FiTrash } from "react-icons/fi";
 
@@ -7,20 +6,18 @@ export default function ProductSpecifications({ specifications, setSpecification
 
   // Inicializar desde specifications
   useEffect(() => {
-    const list = Object.entries(specifications).map(([k, v]) => ({
+    const list = Object.entries(specifications || {}).map(([k, v]) => ({
       id: `spec-${k}`,
       key: k,
       value: v,
     }));
     setSpecList(list);
-  }, []);
+  }, [specifications]);
 
   const syncToParent = (list) => {
     const newSpecs = {};
     list.forEach((s) => {
-      if (s.key.trim()) {
-        newSpecs[s.key] = s.value;
-      }
+      if (s.key.trim()) newSpecs[s.key] = s.value;
     });
     setSpecifications(newSpecs);
   };

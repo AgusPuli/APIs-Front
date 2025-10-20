@@ -10,7 +10,6 @@ export default function CategoryTable({ categories, onEdit, onDelete }) {
             <tr>
               <th className="px-6 py-4">Nombre de Categoría</th>
               <th className="px-6 py-4">Descripción</th>
-              <th className="px-6 py-4">Grupos</th>
               <th className="px-6 py-4 text-right">Acciones</th>
             </tr>
           </thead>
@@ -26,7 +25,10 @@ export default function CategoryTable({ categories, onEdit, onDelete }) {
               ))
             ) : (
               <tr>
-                <td colSpan={4} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                <td
+                  colSpan={3}
+                  className="px-6 py-12 text-center text-gray-500 dark:text-gray-400"
+                >
                   No hay categorías disponibles
                 </td>
               </tr>

@@ -1,12 +1,10 @@
 // src/components/Admin/Category/CreateCategoryModal.jsx
 import { useState, useRef, useEffect } from "react";
-import { FiPlus, FiX } from "react-icons/fi";
+import { FiX } from "react-icons/fi";
 
 export default function CreateCategoryModal({ token, onClose, onCategoryCreated }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [groups, setGroups] = useState([]);
-  const [newGroupName, setNewGroupName] = useState("");
   const [loading, setLoading] = useState(false);
 
   const modalRef = useRef(null);
@@ -22,44 +20,32 @@ export default function CreateCategoryModal({ token, onClose, onCategoryCreated 
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [onClose]);
 
-  const addGroup = () => {
-    if (!newGroupName.trim()) return;
-    setGroups((prev) => [
-      ...prev,
-      { id: crypto.randomUUID(), name: newGroupName.trim() },
-    ]);
-    setNewGroupName("");
-  };
-
-  const removeGroup = (id) => {
-    setGroups((prev) => prev.filter((g) => g.id !== id));
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:8080/api/categories", {
+      const res = await fetch("http://localhost:8080/categories", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          Authorization: token ? `Bearer ${token}` : "",
         },
         body: JSON.stringify({
-          name,
+          name, // debe ser uno de los valores del enum CategoryType
           description,
-          groups: groups.map((g) => ({ name: g.name })),
         }),
       });
 
-      if (!res.ok) throw new Error(`Server responded with ${res.status}`);
+      if (!res.ok) throw new Error(`Error ${res.status}`);
 
       const data = await res.json();
       onCategoryCreated(data);
+      onClose();
+      alert("✅ Categoría creada correctamente");
     } catch (err) {
-      console.error("Error creating category:", err);
-      alert("Error al crear la categoría");
+      console.error("Error al crear la categoría:", err);
+      alert("❌ No se pudo crear la categoría");
     } finally {
       setLoading(false);
     }
@@ -85,21 +71,25 @@ export default function CreateCategoryModal({ token, onClose, onCategoryCreated 
           </button>
         </div>
 
-        {/* Form */}
+        {/* Formulario */}
         <form className="p-6 space-y-5" onSubmit={handleSubmit}>
-          {/* Nombre */}
+          {/* Nombre (Enum CategoryType) */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Nombre de la Categoría
             </label>
-            <input
-              type="text"
+            <select
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="ej. Muebles"
               className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
               required
-            />
+            >
+              <option value="">Seleccionar Tipo</option>
+              <option value="SMARTPHONE">SMARTPHONE</option>
+              <option value="TABLET">TABLET</option>
+              <option value="LAPTOP">LAPTOP</option>
+              <option value="ACCESSORY">ACCESSORY</option>
+            </select>
           </div>
 
           {/* Descripción */}
@@ -114,50 +104,6 @@ export default function CreateCategoryModal({ token, onClose, onCategoryCreated 
               placeholder="Breve descripción de esta categoría"
               className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
             />
-          </div>
-
-          {/* Subcategorías */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Grupos de Subcategorías
-            </label>
-
-            <div className="flex gap-2 mb-3">
-              <input
-                type="text"
-                value={newGroupName}
-                onChange={(e) => setNewGroupName(e.target.value)}
-                placeholder="ej. Hombre"
-                className="flex-1 px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addGroup())}
-              />
-              <button
-                type="button"
-                onClick={addGroup}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-              >
-                <FiPlus size={18} /> Agregar
-              </button>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              {groups.map((g) => (
-                <span
-                  key={g.id}
-                  className="inline-flex items-center gap-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-3 py-1.5 rounded-full text-sm font-medium"
-                >
-                  {g.name}
-                  <button
-                    type="button"
-                    onClick={() => removeGroup(g.id)}
-                    className="hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
-                    title="Eliminar grupo"
-                  >
-                    <FiX size={16} />
-                  </button>
-                </span>
-              ))}
-            </div>
           </div>
 
           {/* Botones */}

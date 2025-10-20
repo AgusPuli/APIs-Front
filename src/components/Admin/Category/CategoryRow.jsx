@@ -15,23 +15,6 @@ export default function CategoryRow({ category, onEdit, onDelete }) {
         {category.description || "-"}
       </td>
 
-      <td className="px-6 py-4">
-        <div className="flex flex-wrap gap-2">
-          {category.groups && category.groups.length > 0 ? (
-            category.groups.map((g) => (
-              <span
-                key={g.id}
-                className="inline-block bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs font-semibold px-3 py-1 rounded-full"
-              >
-                {g.name}
-              </span>
-            ))
-          ) : (
-            <span className="text-gray-400 text-xs">Sin grupos</span>
-          )}
-        </div>
-      </td>
-
       <td className="px-6 py-4 text-right">
         <div className="flex justify-end items-center gap-3">
           <button
