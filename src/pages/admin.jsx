@@ -2,6 +2,7 @@ import { useState } from "react";
 import Sidebar from "../components/Admin/Sidebar";
 import ProductSection from "../components/Admin/Product/ProductSection";
 import CategorySection from "../components/Admin/Category/CategorySection";
+import OrderSection from "../components/Admin/Order/OrderSection";
 
 export default function Admin() {
   const [section, setSection] = useState("products");
@@ -24,16 +25,7 @@ export default function Admin() {
       case "categories":
         return <CategorySection />;
       case "orders":
-        return (
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-sm">
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-              📦 Orders Section
-            </h2>
-            <p className="text-gray-600 dark:text-gray-400">
-              Gestión de pedidos (próximamente)
-            </p>
-          </div>
-        );
+        return <OrderSection />;
       case "settings":
         return (
           <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-sm">
