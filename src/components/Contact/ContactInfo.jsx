@@ -26,7 +26,7 @@ export default function ContactInfo() {
             </div>
             <div className="ml-4">
               <h4 className="text-md font-medium text-gray-800 dark:text-gray-200">Correo Electrónico</h4>
-              <p className="text-gray-600 dark:text-gray-300">soporte@techemporium.com</p>
+              <p className="text-gray-600 dark:text-gray-300">soporte@TechGadget.com</p>
             </div>
           </div>
 
@@ -39,7 +39,7 @@ export default function ContactInfo() {
             </div>
             <div className="ml-4">
               <h4 className="text-md font-medium text-gray-800 dark:text-gray-200">Teléfono</h4>
-              <p className="text-gray-600 dark:text-gray-300">+1 (555) 123-4567</p>
+              <p className="text-gray-600 dark:text-gray-300">+54 9 (11) 6767-6767</p>
             </div>
           </div>
 
@@ -52,7 +52,7 @@ export default function ContactInfo() {
             </div>
             <div className="ml-4">
               <h4 className="text-md font-medium text-gray-800 dark:text-gray-200">Dirección</h4>
-              <p className="text-gray-600 dark:text-gray-300">123 Main Street, Ciudad, Estado, 12345</p>
+              <p className="text-gray-600 dark:text-gray-300">Puli Tower (calle Mar Azul 237), CABA, Arg</p>
             </div>
           </div>
         </div>
