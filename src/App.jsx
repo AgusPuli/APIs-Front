@@ -9,6 +9,7 @@ import Login from "./pages/Login";
 import Admin from "./pages/admin";
 import Cart from "./pages/cart";
 import User from "./pages/user";
+import Checkout from "./pages/checkout";
 
 import Header from "./components/Header";
 import Footer from "./components/Footer";
@@ -55,6 +56,8 @@ function AppLayout() {
           <Route path="/cart" element={<Cart />} />
 
           <Route path="/user" element={<User />} />
+
+          <Route path="/checkout" element={<Checkout />} />
         </Routes>
       </main>
 
