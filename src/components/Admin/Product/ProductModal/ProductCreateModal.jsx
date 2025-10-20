@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { FiX } from "react-icons/fi";
 import ProductBasicInfo from "./ProductBasicInfo";
-import ProductImages from "./ProductImages";
 
 export default function ProductCreateModal({ token, onClose, onProductCreated }) {
   const [form, setForm] = useState({
@@ -10,65 +9,78 @@ export default function ProductCreateModal({ token, onClose, onProductCreated })
     price: "",
     stock: "",
     category: "",
-    images: [""],
   });
 
+  const [categories, setCategories] = useState([]); // 🔹 Se llena desde el backend
+  const [imageFile, setImageFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const modalRef = useRef(null);
 
-  // 🔹 Categorías fijas del enum CategoryType
-  const FIXED_CATEGORIES = [
-    { value: "APPLE", label: "Apple" },
-    { value: "SAMSUNG", label: "Samsung" },
-    { value: "XIOMI", label: "Xiaomi" },
-  ];
-
-  // Cerrar modal al hacer clic fuera
+  // ✅ Obtener categorías desde el backend (GET /categories)
   useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (modalRef.current && !modalRef.current.contains(e.target)) onClose();
+    const fetchCategories = async () => {
+      try {
+        const res = await fetch("http://localhost:8080/categories");
+        if (!res.ok) throw new Error(`Error ${res.status}`);
+        const data = await res.json();
+        setCategories(data); // 🔹 Guardamos lista completa con id, name, description
+      } catch (err) {
+        console.error("❌ Error cargando categorías:", err);
+        setCategories([]);
+      }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [onClose]);
+    fetchCategories();
+  }, []);
 
-  // Cerrar con tecla Escape
-  useEffect(() => {
-    const handleEscape = (e) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handleEscape);
-    return () => document.removeEventListener("keydown", handleEscape);
-  }, [onClose]);
-
+  // 🧠 Crear producto y subir imagen
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const body = {
-        name: form.name,
-        description: form.description,
-        price: parseFloat(form.price),
-        stock: parseInt(form.stock),
-        category: form.category, // ✅ Mandamos directamente "APPLE", "SAMSUNG" o "XIOMI"
-        images: form.images.filter((url) => url.trim() !== ""),
-      };
-
+      // 1️⃣ Crear el producto con categoría seleccionada
       const res = await fetch("http://localhost:8080/products", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: token ? `Bearer ${token}` : "",
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify({
+          name: form.name,
+          description: form.description,
+          price: parseFloat(form.price),
+          stock: parseInt(form.stock),
+          category: form.category, // 🔹 Mandamos el enum (ej. "APPLE")
+        }),
       });
 
-      if (!res.ok) throw new Error(`Error ${res.status}`);
+      if (!res.ok) throw new Error(`Error al crear producto: ${res.status}`);
       const created = await res.json();
 
-      // ✅ Solo notificamos al padre
+      // 2️⃣ Subir imagen si hay
+      if (imageFile) {
+        const formData = new FormData();
+        formData.append("file", imageFile);
+        formData.append("name", form.name);
+
+        const imgRes = await fetch(
+          `http://localhost:8080/products/${created.id}/image`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: token ? `Bearer ${token}` : "",
+            },
+            body: formData,
+          }
+        );
+
+        if (!imgRes.ok)
+          throw new Error(`Error subiendo imagen: ${imgRes.status}`);
+      }
+
+      alert("✅ Producto creado correctamente");
       onProductCreated(created);
+      onClose();
     } catch (err) {
       console.error("Error al crear producto:", err);
       alert("❌ Error al crear el producto");
@@ -91,7 +103,6 @@ export default function ProductCreateModal({ token, onClose, onProductCreated })
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-            title="Cerrar"
           >
             <FiX size={24} />
           </button>
@@ -110,7 +121,7 @@ export default function ProductCreateModal({ token, onClose, onProductCreated })
             setStock={(v) => setForm((f) => ({ ...f, stock: v }))}
           />
 
-          {/* Categoría */}
+          {/* 🔹 Selector de categoría dinámico */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Categoría
@@ -124,19 +135,26 @@ export default function ProductCreateModal({ token, onClose, onProductCreated })
               required
             >
               <option value="">Seleccionar Categoría</option>
-              {FIXED_CATEGORIES.map((cat) => (
-                <option key={cat.value} value={cat.value}>
-                  {cat.label}
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.name}>
+                  {cat.description || cat.name}
                 </option>
               ))}
             </select>
           </div>
 
-          {/* Imágenes */}
-          <ProductImages
-            images={form.images}
-            setImages={(v) => setForm((f) => ({ ...f, images: v }))}
-          />
+          {/* Imagen */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Imagen del producto
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setImageFile(e.target.files[0])}
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white px-4 py-2"
+            />
+          </div>
 
           {/* Botones */}
           <div className="flex justify-end gap-3 pt-4">
