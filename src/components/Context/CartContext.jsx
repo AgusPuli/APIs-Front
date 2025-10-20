@@ -1,31 +1,41 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import { useSession } from "./SessionContext"; // ajustá la ruta según tu proyecto
+import { useSession } from "./SessionContext"; // Ajustá la ruta si está en otra carpeta
 
 const CartContext = createContext();
 
 export function CartProvider({ children }) {
-  const { token } = useSession();
+  const { token, user } = useSession(); // ✅ también traemos user (para rol, email, etc.)
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // 🔹 Obtener carrito del backend
   const fetchCart = async () => {
     if (!token) return;
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:8080/api/cart", {
-        headers: { Authorization: `Bearer ${token}` },
+      const res = await fetch("http://localhost:8080/carts/cart", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
-      if (!res.ok) throw new Error("Error al obtener carrito");
+
+      if (!res.ok) {
+        console.error("Error al obtener carrito, status:", res.status);
+        throw new Error("Error al obtener carrito");
+      }
+
       const data = await res.json();
+      // 🧠 Aseguramos compatibilidad con backend: mapeamos "items"
       setItems(data.items || []);
     } catch (err) {
-      console.error(err);
+      console.error("Error al obtener carrito:", err);
       setItems([]);
     } finally {
       setLoading(false);
     }
   };
 
+  // 🔹 Agregar item al carrito (solo visual por ahora)
   const addItem = (item) => {
     setItems((prev) => {
       const exist = prev.find(
@@ -34,53 +44,83 @@ export function CartProvider({ children }) {
           i.selectedColor === item.selectedColor &&
           i.selectedStorage === item.selectedStorage
       );
+
       if (exist) {
-        return prev.map((i) => (i === exist ? { ...i, quantity: i.quantity + item.quantity } : i));
+        return prev.map((i) =>
+          i === exist ? { ...i, quantity: i.quantity + item.quantity } : i
+        );
       } else {
         return [...prev, item];
       }
     });
   };
 
-  const updateQuantity = async (id, quantity) => {
-    setItems((prev) => prev.map((item) => (item.id === id ? { ...item, quantity } : item)));
+  // 🔹 Actualizar cantidad de un item
+  const updateQuantity = async (productId, quantity) => {
+    setItems((prev) =>
+      prev.map((item) =>
+        item.productId === productId ? { ...item, quantity } : item
+      )
+    );
 
     try {
       if (!token) return;
-      if (quantity <= 0) {
-        removeItem(id);
-        return;
-      }
-      const res = await fetch(`http://localhost:8080/api/cart/items/${id}?quantity=${quantity}`, {
-        method: "PUT",
-        headers: { Authorization: `Bearer ${token}` },
-      });
+
+      const res = await fetch(
+        `http://localhost:8080/carts/${user?.id}/item/${productId}?quantity=${quantity}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
       if (!res.ok) throw new Error("No se pudo actualizar la cantidad");
     } catch (err) {
       console.error(err);
     }
   };
 
-  const removeItem = async (id) => {
-    setItems((prev) => prev.filter((item) => item.id !== id));
+  // 🔹 Eliminar item del carrito
+  const removeItem = async (productId) => {
+    setItems((prev) => prev.filter((item) => item.productId !== productId));
+
     try {
       if (!token) return;
-      const res = await fetch(`http://localhost:8080/api/cart/items/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
+
+      const res = await fetch(
+        `http://localhost:8080/carts/${user?.id}/item/${productId}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
       if (!res.ok) throw new Error("No se pudo eliminar el producto");
     } catch (err) {
       console.error(err);
     }
   };
 
+  // 🔹 Cargar carrito automáticamente al loguearse
   useEffect(() => {
     fetchCart();
   }, [token]);
 
   return (
-    <CartContext.Provider value={{ items, loading, fetchCart, addItem, updateQuantity, removeItem }}>
+    <CartContext.Provider
+      value={{
+        items,
+        loading,
+        fetchCart,
+        addItem,
+        updateQuantity,
+        removeItem,
+        role: user?.role || "USER", // 👈 rol disponible en el contexto
+      }}
+    >
       {children}
     </CartContext.Provider>
   );
