@@ -25,7 +25,7 @@ export default function Header({
   const { isLoggedIn, logout } = useSession();
 
   return (
-    <header className="sticky top-0 z-50 glass-effect shadow-sm">
+    <header className="sticky top-0 z-50 glass-effect shadow-sm bg-[#0D1029]">
       <div className="border-b border-gray-100 dark:border-gray-800">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 sm:h-20">
@@ -45,12 +45,6 @@ export default function Header({
 
             {/* Botones de acción */}
             <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-              {showSearch && (
-                <div className="hidden sm:block">
-                  <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
-                </div>
-              )}
-
               <CartButton />
 
               {/* Botón de usuario solo en desktop */}
@@ -84,13 +78,6 @@ export default function Header({
             </div>
 
           </div>
-
-          {/* Barra de búsqueda móvil (debajo del header en móvil) */}
-          {showSearch && (
-            <div className="sm:hidden pb-3">
-              <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
-            </div>
-          )}
         </div>
       </div>
 
