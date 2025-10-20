@@ -1,20 +1,56 @@
 // src/pages/Cart.jsx
-import CartList from "../components/Cart/CartList";
-import OrderSummary from "../components/Cart/OrderSummary";
-import { useCart } from "../components/Context/CartContext";
 import { Link } from "react-router-dom";
 import { FiShoppingBag, FiArrowLeft } from "react-icons/fi";
+import CartList from "../components/Cart/CartList";
+import OrderSummary from "../components/Cart/OrderSummary";
+import DiscountCode from "../components/Cart/DiscountCode";
+import { useCart } from "../components/Context/CartContext";
 
 export default function Cart() {
-  const { items, loading, updateQuantity, removeItem } = useCart();
+  const {
+    // Carrito
+    items,
+    loading,
+    updateQuantity,
+    removeItem,
 
-  const subtotal = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
+    // Totales
+    subtotal,
+    discountAmount, // calculado en el contexto
+    // total, // si lo querés mostrar, ya lo tenés en el contexto
+
+    // Cupones
+    lastPreview,
+    appliedCoupon,
+    loadingDiscount,
+    previewCode,
+    applyCode,
+  } = useCart();
+
+  // Handlers que delegan en el contexto
+  const handlePreview = async (code) => {
+    try {
+      await previewCode(code);
+    } catch (e) {
+      // Si tu DiscountCode muestra mensajes con lastPreview,
+      // podés setear un estado de error ahí. Acá lo dejamos simple.
+      console.error(e);
+    }
+  };
+
+  const handleApply = async (code) => {
+    try {
+      await applyCode(code);
+    } catch (e) {
+      console.error(e);
+      alert(e?.message || "No se pudo aplicar el cupón");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <main className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">
-          
           {/* Header */}
           <div className="mb-8">
             <Link
@@ -28,7 +64,7 @@ export default function Cart() {
               Carrito de Compras
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-2">
-              {items.length} {items.length === 1 ? 'producto' : 'productos'} en tu carrito
+              {items.length} {items.length === 1 ? "producto" : "productos"} en tu carrito
             </p>
           </div>
 
@@ -47,7 +83,7 @@ export default function Cart() {
                 Tu carrito está vacío
               </h2>
               <p className="text-gray-600 dark:text-gray-400 mb-8">
-                Agrega productos para comenzar tu compra
+                Agregá productos para comenzar tu compra
               </p>
               <Link
                 to="/products"
@@ -60,19 +96,35 @@ export default function Cart() {
           ) : (
             /* Carrito con productos */
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Lista de productos */}
-              <div className="lg:col-span-2">
+              {/* Lista de productos + cupón */}
+              <div className="lg:col-span-2 space-y-6">
                 <CartList
                   items={items}
                   onQuantityChange={updateQuantity}
                   onDelete={removeItem}
+                />
+
+                <DiscountCode
+                  onPreview={handlePreview}
+                  onApply={handleApply}
+                  loading={loadingDiscount}
+                  lastPreview={lastPreview}
+                  appliedCoupon={appliedCoupon}
                 />
               </div>
 
               {/* Resumen del pedido */}
               <div className="lg:col-span-1">
                 <div className="sticky top-24">
-                  <OrderSummary subtotal={subtotal} isDisabled={items.length === 0} />
+                  <OrderSummary
+                    subtotal={subtotal}
+                    discountAmount={discountAmount}
+                    discountLabel={
+                      appliedCoupon?.code ? `Cupón (${appliedCoupon.code})` : "Cupón"
+                    }
+                    isDisabled={items.length === 0}
+                    // total={total} // si tu componente lo soporta
+                  />
                 </div>
               </div>
             </div>

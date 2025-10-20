@@ -1,21 +1,32 @@
 // src/components/Admin/Sidebar.jsx
 import { useState } from "react";
-import { FiGrid, FiPackage, FiFolder, FiShoppingCart, FiSettings, FiMenu, FiX } from "react-icons/fi";
+import {
+  FiGrid,
+  FiPackage,
+  FiFolder,
+  FiShoppingCart,
+  FiTag,
+  FiSettings,
+  FiMenu,
+  FiX,
+} from "react-icons/fi";
 
 export default function Sidebar({ currentSection, setSection }) {
   const [isOpen, setIsOpen] = useState(false);
 
+  // 🧩 Menú completo, incluyendo Cupones
   const menuItems = [
     { id: "dashboard", label: "Dashboard", icon: FiGrid },
     { id: "products", label: "Productos", icon: FiPackage },
     { id: "categories", label: "Categorías", icon: FiFolder },
     { id: "orders", label: "Pedidos", icon: FiShoppingCart },
+    { id: "discounts", label: "Cupones", icon: FiTag }, // 👈 antes decía "coupons"
     { id: "settings", label: "Configuración", icon: FiSettings },
   ];
 
   return (
     <>
-      {/* Mobile menu button */}
+      {/* Botón menú móvil */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-white dark:bg-gray-800 shadow-lg"
@@ -23,7 +34,7 @@ export default function Sidebar({ currentSection, setSection }) {
         {isOpen ? <FiX size={24} /> : <FiMenu size={24} />}
       </button>
 
-      {/* Overlay para móvil */}
+      {/* Overlay en móvil */}
       {isOpen && (
         <div
           className="lg:hidden fixed inset-0 bg-black/50 z-30"
@@ -45,7 +56,7 @@ export default function Sidebar({ currentSection, setSection }) {
           </p>
         </div>
 
-        {/* Menu */}
+        {/* Menú principal */}
         <nav className="p-4">
           <ul className="space-y-2">
             {menuItems.map((item) => {
