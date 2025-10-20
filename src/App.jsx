@@ -22,49 +22,32 @@ import "./index.css";
 function AppLayout() {
   const location = useLocation();
   
-  // Ocultar Header y Footer en rutas de admin
-  const isAdminRoute = location.pathname.startsWith('/admin');
+  // Ocultar Header y Footer en rutas de admin y user
+  const hideLayout = location.pathname.startsWith("/admin") || location.pathname.startsWith("/user");
 
   return (
     <>
-      {/* Header visible solo si NO estás en admin */}
-      {!isAdminRoute && <Header />}
+      {/* Header visible solo si NO estás en admin o user */}
+      {!hideLayout && <Header />}
 
-      <main className={isAdminRoute ? "" : "min-h-screen"}>
+      <main className={hideLayout ? "" : "min-h-screen"}>
         <Routes>
-          {/* 🏠 Página principal */}
           <Route path="/" element={<Home />} />
-
-          {/* 🛒 Catálogo general */}
           <Route path="/products" element={<Products />} />
-
-          {/* 📦 Página de producto individual */}
           <Route path="/product/:productId" element={<ProductPage />} />
-
-          {/* ❓ Preguntas frecuentes */}
           <Route path="/faq" element={<FAQPage />} />
-
-          {/* 📞 Contacto */}
           <Route path="/contact" element={<ContactPage />} />
-
-          {/* 🔐 Inicio de sesión */}
           <Route path="/login" element={<Login />} />
-
-          {/* 👨‍💼 Panel de administración */}
           <Route path="/admin" element={<Admin />} />
-
           <Route path="/cart" element={<Cart />} />
-
           <Route path="/user" element={<User />} />
-
           <Route path="/checkout" element={<Checkout />} />
         </Routes>
       </main>
 
-      {/* Footer visible solo si NO estás en admin */}
-      {!isAdminRoute && <Footer />}
+      {/* Footer visible solo si NO estás en admin o user */}
+      {!hideLayout && <Footer />}
       
-      {/* Toasts globales siempre visibles */}
       <Toaster position="top-right" />
     </>
   );

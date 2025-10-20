@@ -1,13 +1,13 @@
-// src/components/User/SideBar.jsx
+// src/components/User/Sidebar.jsx
 import { useState } from "react";
-import { FiMenu, FiX, FiShoppingBag, FiUser, FiLogOut } from "react-icons/fi";
+import { FiUser, FiShoppingCart, FiMenu, FiX } from "react-icons/fi";
 
-export default function SidebarUser({ currentSection, setSection, onLogout }) {
+export default function Sidebar({ currentSection, setSection }) {
   const [isOpen, setIsOpen] = useState(false);
 
   const menuItems = [
-    { id: "orders", label: "Mis Órdenes", icon: FiShoppingBag },
-    { id: "profile", label: "Perfil", icon: FiUser },
+    { id: "orders", label: "Mis Pedidos", icon: FiShoppingCart },
+    { id: "profile", label: "Mi Perfil", icon: FiUser },
   ];
 
   return (
@@ -16,7 +16,6 @@ export default function SidebarUser({ currentSection, setSection, onLogout }) {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-white dark:bg-gray-800 shadow-lg"
-        aria-label="Abrir menú"
       >
         {isOpen ? <FiX size={24} /> : <FiMenu size={24} />}
       </button>
@@ -35,15 +34,13 @@ export default function SidebarUser({ currentSection, setSection, onLogout }) {
           isOpen ? "translate-x-0" : "-translate-x-full"
         } lg:translate-x-0`}
       >
-        {/* Header */}
         <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-          <h1 className="text-2xl font-bold">Mi Cuenta</h1>
+          <h1 className="text-2xl font-bold text-gradient">Mi Cuenta</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            TechGadget
+            Gestiona tus datos y pedidos
           </p>
         </div>
 
-        {/* Menú */}
         <nav className="p-4">
           <ul className="space-y-2">
             {menuItems.map((item) => {
@@ -71,21 +68,6 @@ export default function SidebarUser({ currentSection, setSection, onLogout }) {
             })}
           </ul>
         </nav>
-
-        {/* Footer */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-gray-700">
-          <button
-            onClick={onLogout}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-            title="Cerrar sesión"
-          >
-            <FiLogOut />
-            Cerrar sesión
-          </button>
-          <p className="text-xs text-center text-gray-500 dark:text-gray-400 mt-2">
-            © 2024 TechGadget
-          </p>
-        </div>
       </aside>
     </>
   );
