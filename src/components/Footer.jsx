@@ -145,9 +145,9 @@ export default function Footer() {
             © {currentYear} TechGadget. Todos los derechos reservados.
           </p>
           <div className="flex items-center gap-2 text-sm text-gray-400">
-            <span>Desarrollado con</span>
+            <span>Desarrollado</span>
+            <span>por Grupo 8</span>
             <span className="text-red-500 animate-pulse">❤️</span>
-            <span>por tu equipo</span>
           </div>
         </div>
       </div>
