@@ -1,41 +1,39 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import { useSession } from "./SessionContext"; // Ajustá la ruta si está en otra carpeta
+import { useSession } from "./SessionContext";
 
 const CartContext = createContext();
 
 export function CartProvider({ children }) {
-  const { token, user } = useSession(); // ✅ también traemos user (para rol, email, etc.)
+  const { token } = useSession();
   const [items, setItems] = useState([]);
+  const [userId, setUserId] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // 🔹 Obtener carrito del backend
+  // 🔹 Obtener carrito y userId del backend
   const fetchCart = async () => {
     if (!token) return;
     setLoading(true);
     try {
       const res = await fetch("http://localhost:8080/carts/cart", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (!res.ok) {
-        console.error("Error al obtener carrito, status:", res.status);
-        throw new Error("Error al obtener carrito");
-      }
+      if (!res.ok) throw new Error("Error al obtener carrito");
 
       const data = await res.json();
-      // 🧠 Aseguramos compatibilidad con backend: mapeamos "items"
       setItems(data.items || []);
+      setUserId(data.userId || null);
+      localStorage.setItem("cartItems", JSON.stringify(data.items || []));
     } catch (err) {
       console.error("Error al obtener carrito:", err);
       setItems([]);
+      setUserId(null);
     } finally {
       setLoading(false);
     }
   };
 
-  // 🔹 Agregar item al carrito (solo visual por ahora)
+  // 🔹 Agregar item localmente
   const addItem = (item) => {
     setItems((prev) => {
       const exist = prev.find(
@@ -44,7 +42,6 @@ export function CartProvider({ children }) {
           i.selectedColor === item.selectedColor &&
           i.selectedStorage === item.selectedStorage
       );
-
       if (exist) {
         return prev.map((i) =>
           i === exist ? { ...i, quantity: i.quantity + item.quantity } : i
@@ -55,43 +52,62 @@ export function CartProvider({ children }) {
     });
   };
 
-  // 🔹 Actualizar cantidad de un item
-  const updateQuantity = async (productId, quantity) => {
-    setItems((prev) =>
-      prev.map((item) =>
-        item.productId === productId ? { ...item, quantity } : item
-      )
-    );
-
+  // 🔹 Actualizar cantidad desde los botones (+ / -)
+  const updateQuantity = async (productId, newQuantity, action = "add") => {
     try {
-      if (!token) return;
+      if (!token || !userId) return;
 
-      const res = await fetch(
-        `http://localhost:8080/carts/${user?.id}/item/${productId}?quantity=${quantity}`,
-        {
-          method: "PUT",
+      if (action === "add") {
+        // ➕ Agregar una unidad más usando /carts/add
+        const payload = {
+          userId,
+          item: { productId, quantity: 1 },
+        };
+
+        const res = await fetch("http://localhost:8080/carts/add", {
+          method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-        }
-      );
+          body: JSON.stringify(payload),
+        });
 
-      if (!res.ok) throw new Error("No se pudo actualizar la cantidad");
+        if (!res.ok) throw new Error("Error al agregar producto");
+      } else if (action === "remove") {
+        // ➖ Disminuir cantidad o eliminar si llega a 0
+        if (newQuantity <= 0) {
+          await removeItem(productId);
+          return;
+        }
+
+        const res = await fetch(
+          `http://localhost:8080/carts/${userId}/item/${productId}/decrease`,
+          {
+            method: "PUT",
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        if (!res.ok) throw new Error("Error al disminuir producto");
+      }
+
+      // 🔁 Refrescar carrito actualizado
+      await fetchCart();
     } catch (err) {
-      console.error(err);
+      console.error("Error al actualizar cantidad:", err);
     }
   };
 
-  // 🔹 Eliminar item del carrito
+  // 🔹 Eliminar item completamente
   const removeItem = async (productId) => {
     setItems((prev) => prev.filter((item) => item.productId !== productId));
 
     try {
-      if (!token) return;
+      if (!token || !userId) return;
 
       const res = await fetch(
-        `http://localhost:8080/carts/${user?.id}/item/${productId}`,
+        `http://localhost:8080/carts/${userId}/item/${productId}`,
         {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },
@@ -104,7 +120,16 @@ export function CartProvider({ children }) {
     }
   };
 
-  // 🔹 Cargar carrito automáticamente al loguearse
+  // 🔁 Sincronizar con localStorage
+  useEffect(() => {
+    if (items.length > 0) {
+      localStorage.setItem("cartItems", JSON.stringify(items));
+    } else {
+      localStorage.removeItem("cartItems");
+    }
+  }, [items]);
+
+  // 🔁 Cargar carrito al iniciar sesión
   useEffect(() => {
     fetchCart();
   }, [token]);
@@ -113,12 +138,12 @@ export function CartProvider({ children }) {
     <CartContext.Provider
       value={{
         items,
+        userId,
         loading,
         fetchCart,
         addItem,
         updateQuantity,
         removeItem,
-        role: user?.role || "USER", // 👈 rol disponible en el contexto
       }}
     >
       {children}

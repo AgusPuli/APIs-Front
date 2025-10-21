@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { FiX } from "react-icons/fi";
 import ProductBasicInfo from "./ProductBasicInfo";
-import ProductImages from "./ProductImages";
 
 export default function EditProductModal({ token, product, onClose, onProductUpdated }) {
   const [form, setForm] = useState({
@@ -10,9 +9,9 @@ export default function EditProductModal({ token, product, onClose, onProductUpd
     price: product.price || "",
     stock: product.stock || "",
     category: product.category || "",
-    images: product.images?.length ? product.images : [""],
   });
 
+  const [imageFile, setImageFile] = useState(null); // ✅ nueva imagen seleccionada
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loadingCategories, setLoadingCategories] = useState(true);
@@ -56,19 +55,19 @@ export default function EditProductModal({ token, product, onClose, onProductUpd
     return () => document.removeEventListener("keydown", handleEscape);
   }, [onClose]);
 
-  // ✅ Guardar cambios
+  // ✅ Guardar cambios (PUT + POST imagen)
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
+      // 1️⃣ Actualizar datos básicos
       const body = {
         name: form.name,
         description: form.description,
         price: parseFloat(form.price),
         stock: parseInt(form.stock),
-        category: form.category, // enum directo (APPLE, SAMSUNG, etc.)
-        images: form.images.filter((url) => url.trim() !== ""),
+        category: form.category,
       };
 
       const res = await fetch(`http://localhost:8080/products/${product.id}`, {
@@ -80,13 +79,35 @@ export default function EditProductModal({ token, product, onClose, onProductUpd
         body: JSON.stringify(body),
       });
 
-      if (!res.ok) throw new Error(`Error ${res.status}`);
+      if (!res.ok) throw new Error(`Error al actualizar producto`);
       const updated = await res.json();
 
-      onProductUpdated(updated); // el padre muestra el alert y refresca
+      // 2️⃣ Subir imagen si el usuario seleccionó una nueva
+      if (imageFile) {
+        const formData = new FormData();
+        formData.append("file", imageFile);
+
+        const imgRes = await fetch(
+          `http://localhost:8080/products/${product.id}/image`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: token ? `Bearer ${token}` : "",
+            },
+            body: formData,
+          }
+        );
+
+        if (!imgRes.ok)
+          throw new Error(`Error al subir imagen: ${imgRes.status}`);
+      }
+
+      alert("✅ Producto actualizado correctamente");
+      onProductUpdated(updated);
+      onClose();
     } catch (err) {
-      console.error("Error al actualizar producto:", err);
-      alert("❌ Error al actualizar el producto");
+      console.error("❌ Error al actualizar producto:", err);
+      alert("❌ No se pudo actualizar el producto");
     } finally {
       setLoading(false);
     }
@@ -113,7 +134,10 @@ export default function EditProductModal({ token, product, onClose, onProductUpd
         </div>
 
         {/* Formulario */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+        <form
+          onSubmit={handleSubmit}
+          className="p-6 space-y-6 max-h-[70vh] overflow-y-auto"
+        >
           <ProductBasicInfo
             name={form.name}
             setName={(v) => setForm((f) => ({ ...f, name: v }))}
@@ -151,11 +175,23 @@ export default function EditProductModal({ token, product, onClose, onProductUpd
             )}
           </div>
 
-          {/* Imágenes */}
-          <ProductImages
-            images={form.images}
-            setImages={(v) => setForm((f) => ({ ...f, images: v }))}
-          />
+          {/* Imagen nueva */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Nueva Imagen (opcional)
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setImageFile(e.target.files[0])}
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white px-4 py-2"
+            />
+            {product.imageUrl && (
+              <p className="text-sm text-gray-500 mt-2">
+                Imagen actual: <em>{product.imageUrl}</em>
+              </p>
+            )}
+          </div>
 
           {/* Botones */}
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
