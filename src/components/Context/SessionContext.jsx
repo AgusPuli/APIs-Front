@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import { jwtDecode } from 'jwt-decode';
+import { jwtDecode } from "jwt-decode";
 
 const SessionContext = createContext();
 
@@ -14,9 +14,11 @@ export function SessionProvider({ children }) {
       try {
         const decoded = jwtDecode(savedToken);
         const exp = decoded.exp * 1000;
+
         if (Date.now() < exp) {
           setToken(savedToken);
-          setUser(decoded);
+          // 🔹 Cargar datos completos del usuario desde el backend
+          fetchUserDetails(decoded.sub, savedToken);
         } else {
           logout();
         }
@@ -28,12 +30,38 @@ export function SessionProvider({ children }) {
     setLoading(false);
   }, []);
 
+  // 🔹 Obtener datos del usuario desde el backend
+  const fetchUserDetails = async (email, jwt) => {
+    try {
+      const res = await fetch(`http://localhost:8080/users/email/${email}`, {
+        headers: {
+          Authorization: `Bearer ${jwt}`,
+        },
+      });
+
+      if (!res.ok) throw new Error("Error obteniendo datos del usuario");
+
+      const data = await res.json();
+
+      // 🔹 Guardar datos reales en el contexto
+      setUser({
+        id: data.id,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        role: data.role,
+      });
+    } catch (err) {
+      console.error("Error al obtener datos del usuario:", err);
+    }
+  };
+
   const login = (newToken) => {
     try {
       const decoded = jwtDecode(newToken);
       setToken(newToken);
-      setUser(decoded);
       localStorage.setItem("jwt", newToken);
+      fetchUserDetails(decoded.sub, newToken);
     } catch (err) {
       console.error("JWT inválido", err);
     }
@@ -52,7 +80,7 @@ export function SessionProvider({ children }) {
       {children}
     </SessionContext.Provider>
   );
-};
+}
 
 export function useSession() {
   const context = useContext(SessionContext);
