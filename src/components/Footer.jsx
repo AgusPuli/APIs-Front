@@ -9,17 +9,17 @@ export default function Footer() {
     company: [
       { name: "Sobre Nosotros", href: "/faq" },
       { name: "Contacto", href: "/contact" },
-      { name: "Carreras", href: "#" },
+      { name: "Carreras", href: "/faq" },
     ],
     support: [
-      { name: "Centro de Ayuda", href: "#" },
-      { name: "Envíos", href: "#" },
-      { name: "Devoluciones", href: "#" },
+      { name: "Centro de Ayuda", href: "/faq" },
+      { name: "Envíos", href: "/faq" },
+      { name: "Devoluciones", href: "/faq" },
     ],
     legal: [
-      { name: "Términos y Condiciones", href: "#" },
-      { name: "Política de Privacidad", href: "#" },
-      { name: "Cookies", href: "#" },
+      { name: "Términos y Condiciones", href: "/faq" },
+      { name: "Política de Privacidad", href: "/faq" },
+      { name: "Cookies", href: "/faq" },
     ],
   };
 
