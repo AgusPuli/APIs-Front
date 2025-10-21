@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useMemo } from "react";
 import { useSession } from "./SessionContext";
 
 const CartContext = createContext();
@@ -8,6 +8,11 @@ export function CartProvider({ children }) {
   const [items, setItems] = useState([]);
   const [userId, setUserId] = useState(null);
   const [loading, setLoading] = useState(true);
+  
+  // Estados para cupones
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [lastPreview, setLastPreview] = useState(null);
+  const [loadingDiscount, setLoadingDiscount] = useState(false);
 
   // 🔹 Obtener carrito y userId del backend
   const fetchCart = async () => {
@@ -43,20 +48,24 @@ export function CartProvider({ children }) {
   // 🔹 Agregar item localmente
   const addItem = (item) => {
     setItems((prev) => {
-      const idx = prev.findIndex(
+      const existingIndex = prev.findIndex(
         (i) =>
           i.productId === item.productId &&
           i.selectedColor === item.selectedColor &&
           i.selectedStorage === item.selectedStorage
       );
-      if (exist) {
-        return prev.map((i) =>
-          i === exist ? { ...i, quantity: i.quantity + item.quantity } : i
+      
+      if (existingIndex !== -1) {
+        // Ya existe, incrementar cantidad
+        return prev.map((i, idx) =>
+          idx === existingIndex 
+            ? { ...i, quantity: i.quantity + item.quantity } 
+            : i
         );
       } else {
+        // No existe, agregar nuevo
         return [...prev, item];
       }
-      return [...prev, item];
     });
   };
 
@@ -100,7 +109,7 @@ export function CartProvider({ children }) {
         if (!res.ok) throw new Error("Error al disminuir producto");
       }
 
-      // 🔁 Refrescar carrito actualizado
+      // 🔄 Refrescar carrito actualizado
       await fetchCart();
     } catch (err) {
       console.error("Error al actualizar cantidad:", err);
@@ -129,7 +138,77 @@ export function CartProvider({ children }) {
     }
   };
 
-  // 🔁 Sincronizar con localStorage
+  // 🔹 Previsualizar código de descuento
+  const previewCode = async (code) => {
+    if (!code.trim()) return;
+    
+    setLoadingDiscount(true);
+    try {
+      const res = await fetch("http://localhost:8080/cart/discounts/preview", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ code: code.trim() }),
+      });
+
+      if (!res.ok) throw new Error("Código inválido");
+
+      const data = await res.json();
+      setLastPreview(data);
+    } catch (err) {
+      console.error("Error al previsualizar:", err);
+      setLastPreview({ code, message: "Código no válido", discountAmount: 0 });
+    } finally {
+      setLoadingDiscount(false);
+    }
+  };
+
+  // 🔹 Aplicar código de descuento
+  const applyCode = async (code) => {
+    if (!code.trim()) return;
+    
+    setLoadingDiscount(true);
+    try {
+      const res = await fetch("http://localhost:8080/cart/discounts/apply", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ code: code.trim() }),
+      });
+
+      if (!res.ok) throw new Error("No se pudo aplicar el cupón");
+
+      const data = await res.json();
+      setAppliedCoupon({ code, discountAmount: data.discountAmount || 0 });
+      setLastPreview(null);
+    } catch (err) {
+      console.error("Error al aplicar cupón:", err);
+      throw err;
+    } finally {
+      setLoadingDiscount(false);
+    }
+  };
+
+  // 🔹 Calcular subtotal
+  const subtotal = useMemo(() => {
+    return items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  }, [items]);
+
+  // 🔹 Calcular descuento
+  const discountAmount = useMemo(() => {
+    return appliedCoupon?.discountAmount || 0;
+  }, [appliedCoupon]);
+
+  // 🔹 Calcular total
+  const total = useMemo(() => {
+    return subtotal - discountAmount;
+  }, [subtotal, discountAmount]);
+
+  // 🔄 Sincronizar con localStorage
   useEffect(() => {
     if (items.length > 0) {
       localStorage.setItem("cartItems", JSON.stringify(items));
@@ -138,7 +217,7 @@ export function CartProvider({ children }) {
     }
   }, [items]);
 
-  // 🔁 Cargar carrito al iniciar sesión
+  // 🔄 Cargar carrito al iniciar sesión
   useEffect(() => {
     fetchCart();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -155,6 +234,18 @@ export function CartProvider({ children }) {
         addItem,
         updateQuantity,
         removeItem,
+        
+        // Totales
+        subtotal,
+        discountAmount,
+        total,
+        
+        // Cupones
+        appliedCoupon,
+        lastPreview,
+        loadingDiscount,
+        previewCode,
+        applyCode,
       }}
     >
       {children}

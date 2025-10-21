@@ -1,38 +1,26 @@
-const fmtDateTime = (v) => {
-  if (!v) return "—";
-  const d = new Date(typeof v === "string" ? v.replace(" ", "T") : v);
-  if (isNaN(d.getTime())) return "—";
-  return new Intl.DateTimeFormat("es-AR", {
-    year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit"
-  }).format(d);
-};
+// src/components/Admin/Discount/DiscountRow.jsx
+export default function DiscountRow({ discount }) {
+  const { code, percentage, active, startsAt, endsAt } = discount;
 
-export default function DiscountRow({ item, onDelete }) {
-  const code       = item.code;
-  const percentage = item.percentage;
-  const active     = !!item.active;
-  const startsAt   = item.startsAt ?? item.startAt ?? null;
-  const endsAt     = item.endsAt   ?? item.endAt   ?? null;
+  const formatDate = (dateString) => {
+    if (!dateString) return "—";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("es-AR");
+  };
 
   return (
-    <tr className="border-b border-gray-100 dark:border-gray-700/50">
-      <td className="p-3 font-medium">{code}</td>
-      <td className="p-3">%</td>
-      <td className="p-3">{Number(percentage)}%</td>
-      <td className="p-3">—</td>
-      <td className="p-3">{fmtDateTime(startsAt)}</td>
-      <td className="p-3">{fmtDateTime(endsAt)}</td>
-      <td className="p-3">
-        <span className={`px-2 py-1 rounded text-xs ${active ? "bg-green-100 text-green-800" : "bg-gray-200 text-gray-700"}`}>
-          {active ? "Activo" : "Inactivo"}
-        </span>
+    <tr className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
+      <td className="px-6 py-3 font-medium text-gray-900 dark:text-white">{code}</td>
+      <td className="px-6 py-3">{percentage}%</td>
+      <td className="px-6 py-3">
+        {active ? (
+          <span className="text-green-600 font-medium">Activo</span>
+        ) : (
+          <span className="text-red-600 font-medium">Inactivo</span>
+        )}
       </td>
-      <td className="p-3">
-        <button onClick={onDelete} className="text-red-600 hover:underline">
-          Eliminar
-        </button>
-      </td>
+      <td className="px-6 py-3">{formatDate(startsAt)}</td>
+      <td className="px-6 py-3">{formatDate(endsAt)}</td>
     </tr>
   );
 }

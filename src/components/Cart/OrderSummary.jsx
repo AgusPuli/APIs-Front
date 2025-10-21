@@ -1,12 +1,18 @@
 import { FiShoppingCart } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 
-export default function OrderSummary({ subtotal, isDisabled = false }) {
+export default function OrderSummary({ 
+  subtotal, 
+  discountAmount = 0,
+  discountLabel = "Cupón",
+  isDisabled = false 
+}) {
   const navigate = useNavigate();
 
   const shipping = 0; // Envío gratuito
-  const tax = subtotal * 0.21; // IVA 21%
-  const total = subtotal + shipping + tax;
+  const subtotalAfterDiscount = subtotal - discountAmount;
+  const tax = subtotalAfterDiscount * 0.21; // IVA 21%
+  const total = subtotalAfterDiscount + shipping + tax;
 
   const handleCheckout = () => {
     if (!isDisabled) {
@@ -26,6 +32,14 @@ export default function OrderSummary({ subtotal, isDisabled = false }) {
           <p>Subtotal</p>
           <p className="font-semibold">${subtotal.toFixed(2)}</p>
         </div>
+
+        {/* Descuento (si existe) */}
+        {discountAmount > 0 && (
+          <div className="flex justify-between text-green-600 dark:text-green-400">
+            <p>{discountLabel}</p>
+            <p className="font-semibold">-${discountAmount.toFixed(2)}</p>
+          </div>
+        )}
 
         {/* Envío */}
         <div className="flex justify-between text-gray-700 dark:text-gray-300">
