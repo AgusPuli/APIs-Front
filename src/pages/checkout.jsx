@@ -10,15 +10,16 @@ import { FiLock } from "react-icons/fi";
 
 export default function Checkout() {
   const navigate = useNavigate();
-  const { items, clearCart } = useCart();
+  const { items, clearCart, subtotal, discountAmount, appliedCoupon } = useCart();
   const { token, user } = useSession();
 
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
 
+  // 🏠 Datos de envío
   const [shippingData, setShippingData] = useState({
-    fullName: "",
-    email: "",
+    fullName: user ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : "",
+    email: user?.email || "",
     phone: "",
     address: "",
     city: "",
@@ -27,6 +28,7 @@ export default function Checkout() {
     country: "Argentina",
   });
 
+  // 💳 Datos de pago (solo para UI; backend espera un PaymentRequest separado)
   const [paymentData, setPaymentData] = useState({
     cardNumber: "",
     cardHolder: "",
@@ -34,14 +36,10 @@ export default function Checkout() {
     cvv: "",
   });
 
-  const [discountCode, setDiscountCode] = useState("");
-  const [discountApplied, setDiscountApplied] = useState(null);
-
-  const subtotal = items.reduce((acc, i) => acc + i.price * i.quantity, 0);
-  const discountAmount = discountApplied ? (subtotal * discountApplied.percent) / 100 : 0;
+  // Totales
   const total = subtotal - discountAmount;
 
-  // 👉 Procesar orden (llamando al backend)
+  // 🧾 Enviar orden y luego registrar el pago
   const handlePlaceOrder = async () => {
     if (!token) {
       alert("Debes iniciar sesión para finalizar la compra");
@@ -50,31 +48,77 @@ export default function Checkout() {
 
     setLoading(true);
     try {
-      // Llamamos al endpoint real del backend
+      // 1) Crear la orden (endpoint que ya tenés)
+      // Nota: tu backend usa el carrito del usuario, por eso hacemos POST sin body normalmente.
+      // Si tu OrdersController acepta body, se puede enviar, pero aquí mantenemos el POST "normal".
       const res = await fetch("http://localhost:8080/orders/checkout", {
         method: "POST",
         headers: {
+          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
+        // Si tu backend no acepta body para checkout, podés remover body.
+        // body: JSON.stringify({ /* opcional */ }),
       });
 
-      if (!res.ok) throw new Error("Error al crear la orden");
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error("❌ Error al crear orden:", errText);
+        throw new Error("Error al crear la orden");
+      }
+
       const order = await res.json();
+      console.log("✅ Orden creada:", order);
 
-      // Limpiar carrito
-      await clearCart();
+      // 2) Registrar el pago en /payments (PAYMENT REQUEST)
+      // Aquí mandamos siempre el mismo DTO para pruebas:
+      const paymentPayload = {
+        orderId: order.id,
+        amount: order.total ?? total, // usa el total que venga del backend o el calculado en front
+        method: "CREDIT_CARD",
+        status: "COMPLETED",
+      };
 
-      // Redirigir a página de confirmación o a Mis Órdenes
-      navigate(`/orders`);
+      // ---------- AQUI se llama al endpoint /payments ----------
+      // Endpoint: POST http://localhost:8080/payments
+      // Body JSON enviado: paymentPayload (ver arriba)
+      const payRes = await fetch("http://localhost:8080/payments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(paymentPayload),
+      });
+      // --------------------------------------------------------
+
+      if (!payRes.ok) {
+        const errText = await payRes.text();
+        console.error("❌ Error al registrar pago:", errText);
+        // no abortamos limpieza/redirección automáticamente: lanzamos error para avisar al usuario
+        throw new Error("Error al registrar el pago");
+      }
+
+      const payment = await payRes.json();
+      console.log("💳 Pago procesado:", payment);
+
+      // 3) Limpiar carrito y redirigir a detalle de orden
+      if (typeof clearCart === "function") {
+        await clearCart();
+      } else {
+        console.warn("clearCart no está disponible en useCart()");
+      }
+
+      navigate(`/orders/${order.id || ""}`);
     } catch (err) {
-      console.error(err);
+      console.error("❌ Error general en checkout/pago:", err);
       alert("No se pudo completar el pedido. Intenta nuevamente.");
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ Validaciones de pasos
+  // Validaciones por paso
   const handleNextStep = () => {
     if (currentStep === 1 && !shippingData.fullName) {
       alert("Completá tus datos de envío.");
@@ -84,15 +128,17 @@ export default function Checkout() {
       alert("Completá los datos de pago.");
       return;
     }
-    setCurrentStep(currentStep + 1);
+    setCurrentStep((prev) => prev + 1);
   };
 
-  const handlePrevStep = () => setCurrentStep(currentStep - 1);
+  const handlePrevStep = () => setCurrentStep((prev) => prev - 1);
 
+  // UI
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">
+          {/* Header */}
           <div className="mb-8">
             <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-2">
               Finalizar Compra
@@ -106,6 +152,7 @@ export default function Checkout() {
           <CheckoutSteps currentStep={currentStep} />
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
+            {/* Formularios */}
             <div className="lg:col-span-2">
               {currentStep === 1 && (
                 <ShippingForm
@@ -135,7 +182,7 @@ export default function Checkout() {
               )}
             </div>
 
-            {/* 🧾 Resumen del pedido */}
+            {/* Resumen */}
             <div className="lg:col-span-1">
               <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 sticky top-24">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
@@ -151,7 +198,9 @@ export default function Checkout() {
                         className="w-16 h-16 object-cover rounded-lg"
                       />
                       <div className="flex-1">
-                        <p className="font-medium text-gray-900 dark:text-white">{item.name}</p>
+                        <p className="font-medium text-gray-900 dark:text-white">
+                          {item.name}
+                        </p>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
                           Cant: {item.quantity}
                         </p>
@@ -169,7 +218,9 @@ export default function Checkout() {
                     <span>${subtotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-gray-700 dark:text-gray-300">
-                    <span>Descuento</span>
+                    <span>
+                      {appliedCoupon?.code ? `Descuento (${appliedCoupon.code})` : "Descuento"}
+                    </span>
                     <span>-${discountAmount.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-gray-700 dark:text-gray-300">
