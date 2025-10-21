@@ -109,7 +109,8 @@ export default function Checkout() {
         console.warn("clearCart no está disponible en useCart()");
       }
 
-      navigate(`/orders/${order.id || ""}`);
+      navigate(`/orders/${order.id}`);
+
     } catch (err) {
       console.error("❌ Error general en checkout/pago:", err);
       alert("No se pudo completar el pedido. Intenta nuevamente.");

@@ -16,6 +16,7 @@ import Footer from "./components/Footer";
 import { SessionProvider } from "./components/Context/SessionContext";
 import { CartProvider } from "./components/Context/CartContext";
 import { Toaster } from "react-hot-toast";
+import PaidOrder from "./pages/PaidOrder";
 
 import "./index.css";
 
@@ -43,6 +44,7 @@ function AppLayout() {
           <Route path="/user" element={<User />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/orders" element={<OrdersPage />} />
+          <Route path="/orders/:id" element={<PaidOrder />} />
         </Routes>
       </main>
 
