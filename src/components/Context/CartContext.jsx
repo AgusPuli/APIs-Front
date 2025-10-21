@@ -1,14 +1,25 @@
+<<<<<<< HEAD
 // src/components/Context/CartContext.jsx
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useSession } from "./SessionContext"; // ajustá la ruta si difiere
+=======
+import { createContext, useContext, useState, useEffect } from "react";
+import { useSession } from "./SessionContext";
+>>>>>>> 8f7ea54a9368e9bad5c3e40630f485f434ad34e3
 
 const CartContext = createContext();
 
 export function CartProvider({ children }) {
+<<<<<<< HEAD
   const { token, user } = useSession(); // { id, role, ... }
+=======
+  const { token } = useSession();
+>>>>>>> 8f7ea54a9368e9bad5c3e40630f485f434ad34e3
   const [items, setItems] = useState([]);
+  const [userId, setUserId] = useState(null);
   const [loading, setLoading] = useState(true);
 
+<<<<<<< HEAD
   // 🎟️ Descuentos
   // appliedCoupon: último cupón confirmado por el servidor
   // lastPreview: último cálculo de preview (no guardado)
@@ -46,6 +57,9 @@ export function CartProvider({ children }) {
   // =========================
   // 📥 Obtener carrito
   // =========================
+=======
+  // 🔹 Obtener carrito y userId del backend
+>>>>>>> 8f7ea54a9368e9bad5c3e40630f485f434ad34e3
   const fetchCart = async () => {
     if (!token) {
       setItems([]);
@@ -57,6 +71,7 @@ export function CartProvider({ children }) {
 
     setLoading(true);
     try {
+<<<<<<< HEAD
       const r = await fetch(`${API}/carts/cart`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -77,14 +92,34 @@ export function CartProvider({ children }) {
       console.error("fetchCart:", e);
       setItems([]);
       // no tocamos appliedCoupon
+=======
+      const res = await fetch("http://localhost:8080/carts/cart", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) throw new Error("Error al obtener carrito");
+
+      const data = await res.json();
+      setItems(data.items || []);
+      setUserId(data.userId || null);
+      localStorage.setItem("cartItems", JSON.stringify(data.items || []));
+    } catch (err) {
+      console.error("Error al obtener carrito:", err);
+      setItems([]);
+      setUserId(null);
+>>>>>>> 8f7ea54a9368e9bad5c3e40630f485f434ad34e3
     } finally {
       setLoading(false);
     }
   };
 
+<<<<<<< HEAD
   // =========================
   // ➕ Agregar item (solo UI)
   // =========================
+=======
+  // 🔹 Agregar item localmente
+>>>>>>> 8f7ea54a9368e9bad5c3e40630f485f434ad34e3
   const addItem = (item) => {
     setItems((prev) => {
       const idx = prev.findIndex(
@@ -93,6 +128,7 @@ export function CartProvider({ children }) {
           i.selectedColor === item.selectedColor &&
           i.selectedStorage === item.selectedStorage
       );
+<<<<<<< HEAD
       if (idx >= 0) {
         const copy = [...prev];
         copy[idx] = {
@@ -100,11 +136,20 @@ export function CartProvider({ children }) {
           quantity: Number(copy[idx].quantity || 0) + Number(item.quantity || 0),
         };
         return copy;
+=======
+      if (exist) {
+        return prev.map((i) =>
+          i === exist ? { ...i, quantity: i.quantity + item.quantity } : i
+        );
+      } else {
+        return [...prev, item];
+>>>>>>> 8f7ea54a9368e9bad5c3e40630f485f434ad34e3
       }
       return [...prev, item];
     });
   };
 
+<<<<<<< HEAD
   // =========================
   // 🔁 Actualizar cantidad
   // =========================
@@ -124,10 +169,27 @@ export function CartProvider({ children }) {
         )}`,
         {
           method: "PUT",
+=======
+  // 🔹 Actualizar cantidad desde los botones (+ / -)
+  const updateQuantity = async (productId, newQuantity, action = "add") => {
+    try {
+      if (!token || !userId) return;
+
+      if (action === "add") {
+        // ➕ Agregar una unidad más usando /carts/add
+        const payload = {
+          userId,
+          item: { productId, quantity: 1 },
+        };
+
+        const res = await fetch("http://localhost:8080/carts/add", {
+          method: "POST",
+>>>>>>> 8f7ea54a9368e9bad5c3e40630f485f434ad34e3
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
+<<<<<<< HEAD
         }
       );
       if (!r.ok) throw new Error(await r.text());
@@ -141,11 +203,44 @@ export function CartProvider({ children }) {
   // =========================
   // 🗑️ Eliminar item
   // =========================
+=======
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) throw new Error("Error al agregar producto");
+      } else if (action === "remove") {
+        // ➖ Disminuir cantidad o eliminar si llega a 0
+        if (newQuantity <= 0) {
+          await removeItem(productId);
+          return;
+        }
+
+        const res = await fetch(
+          `http://localhost:8080/carts/${userId}/item/${productId}/decrease`,
+          {
+            method: "PUT",
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        if (!res.ok) throw new Error("Error al disminuir producto");
+      }
+
+      // 🔁 Refrescar carrito actualizado
+      await fetchCart();
+    } catch (err) {
+      console.error("Error al actualizar cantidad:", err);
+    }
+  };
+
+  // 🔹 Eliminar item completamente
+>>>>>>> 8f7ea54a9368e9bad5c3e40630f485f434ad34e3
   const removeItem = async (productId) => {
     // Optimista
     setItems((prev) => prev.filter((it) => it.productId !== productId));
 
     try {
+<<<<<<< HEAD
       if (!token || !user?.id) return;
       const r = await fetch(`${API}/carts/${user.id}/item/${productId}`, {
         method: "DELETE",
@@ -229,6 +324,34 @@ export function CartProvider({ children }) {
   // =========================
   // 🚀 Auto-carga al loguearse
   // =========================
+=======
+      if (!token || !userId) return;
+
+      const res = await fetch(
+        `http://localhost:8080/carts/${userId}/item/${productId}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (!res.ok) throw new Error("No se pudo eliminar el producto");
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // 🔁 Sincronizar con localStorage
+  useEffect(() => {
+    if (items.length > 0) {
+      localStorage.setItem("cartItems", JSON.stringify(items));
+    } else {
+      localStorage.removeItem("cartItems");
+    }
+  }, [items]);
+
+  // 🔁 Cargar carrito al iniciar sesión
+>>>>>>> 8f7ea54a9368e9bad5c3e40630f485f434ad34e3
   useEffect(() => {
     fetchCart();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -239,11 +362,13 @@ export function CartProvider({ children }) {
       value={{
         // Carrito
         items,
+        userId,
         loading,
         fetchCart,
         addItem,
         updateQuantity,
         removeItem,
+<<<<<<< HEAD
 
         // Totales
         subtotal,
@@ -261,6 +386,8 @@ export function CartProvider({ children }) {
 
         // Info de usuario útil para UI
         role: user?.role || "USER",
+=======
+>>>>>>> 8f7ea54a9368e9bad5c3e40630f485f434ad34e3
       }}
     >
       {children}

@@ -1,10 +1,18 @@
-// src/components/Cart/OrderSummary.jsx
 import { FiShoppingCart } from "react-icons/fi";
+import { useNavigate } from "react-router-dom";
 
 export default function OrderSummary({ subtotal, isDisabled = false }) {
+  const navigate = useNavigate();
+
   const shipping = 0; // Envío gratuito
   const tax = subtotal * 0.21; // IVA 21%
   const total = subtotal + shipping + tax;
+
+  const handleCheckout = () => {
+    if (!isDisabled) {
+      navigate("/checkout");
+    }
+  };
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 border border-gray-200 dark:border-gray-700">
@@ -23,7 +31,7 @@ export default function OrderSummary({ subtotal, isDisabled = false }) {
         <div className="flex justify-between text-gray-700 dark:text-gray-300">
           <p>Envío</p>
           <p className="font-semibold text-green-600 dark:text-green-400">
-            {shipping === 0 ? 'Gratis' : `$${shipping.toFixed(2)}`}
+            {shipping === 0 ? "Gratis" : `$${shipping.toFixed(2)}`}
           </p>
         </div>
 
@@ -46,6 +54,7 @@ export default function OrderSummary({ subtotal, isDisabled = false }) {
 
       {/* Botón de checkout */}
       <button
+        onClick={handleCheckout}
         disabled={isDisabled}
         className={`mt-6 w-full flex items-center justify-center gap-2 h-12 rounded-lg px-6 text-base font-bold text-white shadow-md transition-all ${
           isDisabled

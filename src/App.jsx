@@ -10,7 +10,7 @@ import Admin from "./pages/admin";
 import Cart from "./pages/cart";
 import User from "./pages/user";
 import Checkout from "./pages/checkout";
-
+import OrdersPage from "./pages/OrdersPage";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import { SessionProvider } from "./components/Context/SessionContext";
@@ -42,6 +42,7 @@ function AppLayout() {
           <Route path="/cart" element={<Cart />} />
           <Route path="/user" element={<User />} />
           <Route path="/checkout" element={<Checkout />} />
+          <Route path="/orders" element={<OrdersPage />} />
         </Routes>
       </main>
 

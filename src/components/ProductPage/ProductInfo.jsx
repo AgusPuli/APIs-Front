@@ -7,45 +7,87 @@ import { motion } from "framer-motion";
 export default function ProductInfo({ product }) {
   const [selectedStorage, setSelectedStorage] = useState(product.storageOptions?.[0] || "");
   const [selectedColor, setSelectedColor] = useState(product.colors?.[0] || "");
+  const [loading, setLoading] = useState(false);
 
   const { token } = useSession();
-  const { addItem } = useCart();
+  const { addItem, fetchCart, userId } = useCart(); // ✅ traemos el ID real
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (!token) {
       toast.error("Debes iniciar sesión para añadir productos al carrito");
       return;
     }
 
-    const payload = {
-      id: crypto.randomUUID(),
-      productId: product.id,
-      name: product.name,
-      price: product.price,
-      selectedColor,
-      selectedStorage,
-      quantity: 1,
-      imageUrl: product.images?.[0] || "",
-    };
+    if (!userId) {
+      toast.error("No se pudo identificar al usuario logueado");
+      return;
+    }
 
-    addItem(payload);
-    toast.success(`Producto "${product.name}" añadido al carrito`);
+    setLoading(true);
+    try {
+      const payload = {
+        userId, // ✅ se obtiene dinámicamente del contexto
+        item: {
+          productId: product.id,
+          quantity: 1,
+        },
+      };
+
+      const res = await fetch("http://localhost:8080/carts/add", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || "Error al añadir producto al carrito");
+      }
+
+      addItem({
+        id: crypto.randomUUID(),
+        productId: product.id,
+        name: product.name,
+        price: product.price,
+        selectedColor,
+        selectedStorage,
+        quantity: 1,
+        imageUrl: product.images?.[0] || "",
+      });
+
+      await fetchCart();
+      toast.success(`Producto "${product.name}" añadido al carrito`);
+    } catch (err) {
+      console.error("❌ Error al agregar producto:", err);
+      toast.error("No se pudo agregar el producto al carrito");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="flex flex-col gap-6 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-      <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{product.name}</h1>
+      <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+        {product.name}
+      </h1>
       <p className="text-gray-600 dark:text-gray-300">{product.description}</p>
-      <p className="text-3xl font-bold text-primary">${product.price.toFixed(2)}</p>
+      <p className="text-3xl font-bold text-primary">
+        ${product.price.toFixed(2)}
+      </p>
 
       {/* Selectores de almacenamiento */}
       {product.storageOptions && (
         <div>
-          <p className="font-medium mb-2 text-gray-800 dark:text-gray-200">Almacenamiento</p>
+          <p className="font-medium mb-2 text-gray-800 dark:text-gray-200">
+            Almacenamiento
+          </p>
           <div className="flex flex-wrap gap-2">
-            {product.storageOptions.map((s) => (
+            {product.storageOptions.map((s, idx) => (
               <motion.button
-                key={s}
+                key={`${s}-${idx}`}
                 onClick={() => setSelectedStorage(s)}
                 whileTap={{ scale: 0.95 }}
                 className={`px-4 py-2 border rounded-lg font-medium transition-all ${
@@ -64,11 +106,13 @@ export default function ProductInfo({ product }) {
       {/* Selectores de color */}
       {product.colors && (
         <div>
-          <p className="font-medium mb-2 text-gray-800 dark:text-gray-200">Color</p>
+          <p className="font-medium mb-2 text-gray-800 dark:text-gray-200">
+            Color
+          </p>
           <div className="flex gap-3">
-            {product.colors.map((c) => (
+            {product.colors.map((c, idx) => (
               <motion.button
-                key={c}
+                key={`${c}-${idx}`}
                 onClick={() => setSelectedColor(c)}
                 whileTap={{ scale: 0.9 }}
                 className={`w-10 h-10 rounded-full border-2 transition-all ${
@@ -88,9 +132,14 @@ export default function ProductInfo({ product }) {
         onClick={handleAddToCart}
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
-        className="mt-4 w-full py-3 rounded-lg bg-primary text-white font-bold hover:bg-primary/90 transition-all shadow-lg"
+        disabled={loading}
+        className={`mt-4 w-full py-3 rounded-lg font-bold transition-all shadow-lg ${
+          loading
+            ? "bg-gray-400 cursor-not-allowed text-white"
+            : "bg-primary text-white hover:bg-primary/90"
+        }`}
       >
-        Añadir al carrito
+        {loading ? "Agregando..." : "Añadir al carrito"}
       </motion.button>
     </div>
   );

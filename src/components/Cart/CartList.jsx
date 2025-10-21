@@ -17,8 +17,8 @@ export default function CartList({ items, onQuantityChange, onDelete }) {
       <div className="divide-y divide-gray-200 dark:divide-gray-700">
         {items.map((item) => (
           <CartItem
-            key={item.id}
-            product={item}
+            key={item.productId}              // ✅ usa productId como clave única
+            item={item}                       // ✅ cambiamos el nombre del prop a "item"
             onQuantityChange={onQuantityChange}
             onDelete={onDelete}
           />
