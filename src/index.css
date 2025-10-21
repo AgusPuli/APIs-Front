@@ -74,3 +74,18 @@
     @apply bg-gray-800 text-gray-100;
   }
 }
+
+/* Perspectiva para efecto 3D */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+/* Rotación en el eje Y */
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+/* Ocultar la parte trasera de elementos girados */
+.backface-hidden {
+  backface-visibility: hidden;
+}
