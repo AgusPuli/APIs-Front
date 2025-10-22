@@ -79,13 +79,31 @@ export default function ProductSection() {
         }
       );
 
-      if (!res.ok) throw new Error(`Error HTTP ${res.status}`);
+      if (!res.ok) {
+        // Intentar obtener el mensaje de error del backend
+        let errorMsg = `Error HTTP ${res.status}`;
+        try {
+          const errorData = await res.json();
+          errorMsg = errorData.message || errorData.error || errorMsg;
+        } catch {
+          const errorText = await res.text();
+          if (errorText) errorMsg = errorText;
+        }
+        throw new Error(errorMsg);
+      }
+
       await fetchProducts();
       setDeleteProduct(null);
       alert("Producto eliminado exitosamente ✅");
     } catch (err) {
       console.error("Error al eliminar producto:", err);
-      alert("Error al eliminar el producto ❌");
+      
+      // Mostrar mensaje más descriptivo al usuario
+      const errorMessage = err.message.includes("constraint") || err.message.includes("foreign key")
+        ? "No se puede eliminar el producto porque está referenciado en órdenes u otros registros."
+        : `Error al eliminar el producto: ${err.message}`;
+      
+      alert(`❌ ${errorMessage}`);
     } finally {
       setDeleting(false);
     }
