@@ -37,8 +37,6 @@ export default function ProductPage() {
             Stock: data.stock,
             Categoría: data.category?.name,
           },
-          colors: ["#000000", "#ffffff"],
-          storageOptions: ["128GB", "256GB"],
           reviews: [
             { user: "Juan", rating: 5, comment: "Excelente producto!", date: "2025-10-18" },
             { user: "María", rating: 4, comment: "Muy bueno, lo recomiendo.", date: "2025-10-17" },
