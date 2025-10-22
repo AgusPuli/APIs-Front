@@ -43,12 +43,10 @@ export default function Sidebar({ currentSection, setSection }) {
   // 🧩 Menú completo, incluyendo Cupones
   const menuItems = [
     { id: "inicio", label: "Inicio", icon: HomeIcon },
-    { id: "dashboard", label: "Dashboard", icon: FiGrid },
     { id: "products", label: "Productos", icon: FiPackage },
     { id: "categories", label: "Categorías", icon: FiFolder },
-    { id: "orders", label: "Pedidos", icon: FiShoppingCart },
+  //  { id: "orders", label: "Pedidos", icon: FiShoppingCart },
     { id: "discounts", label: "Cupones", icon: FiTag }, // 👈 antes decía "coupons"
-    { id: "settings", label: "Configuración", icon: FiSettings }
   ];
 
   return (
