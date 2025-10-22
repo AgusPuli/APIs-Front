@@ -22,7 +22,7 @@ export default function ProductsList({
     setCurrentPage(1);
   }, [searchQuery, selectedCategory, selectedSubcategory, setCurrentPage]);
 
-  // 🔍 Filtrado de productos
+  // Filtrado de productos
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
       const matchesSearch =
@@ -42,7 +42,7 @@ export default function ProductsList({
     });
   }, [products, searchQuery, selectedCategory, selectedSubcategory]);
 
-  // 📄 Paginación
+  // Paginación
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / itemsPerPage));
   const paginatedProducts = filteredProducts.slice(
     (currentPage - 1) * itemsPerPage,
@@ -56,7 +56,7 @@ export default function ProductsList({
     <section className="py-8 sm:py-12">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         
-        {/* 🔹 Header con título, buscador y contador */}
+        {/* Header con título, buscador y contador */}
         <div className="mb-8 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-2">
@@ -70,7 +70,7 @@ export default function ProductsList({
             </p>
           </div>
 
-          {/* 🔍 SearchBar (buscador de productos) */}
+          {/* SearchBar (buscador de productos) */}
           <div className="w-full lg:w-72">
             <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
           </div>
@@ -78,7 +78,7 @@ export default function ProductsList({
 
         <div className="flex flex-col lg:flex-row gap-8">
           
-          {/* 🧭 Filtros de escritorio */}
+          {/* Filtros de escritorio */}
           <aside className="hidden lg:block w-64 flex-shrink-0">
             <div className="sticky top-24">
               <ProductFilters
@@ -91,7 +91,7 @@ export default function ProductsList({
             </div>
           </aside>
 
-          {/* 🛒 Contenido principal */}
+          {/* Contenido principal */}
           <div className="flex-1">
             {/* Filtros móviles */}
             <div className="lg:hidden mb-6">
@@ -147,7 +147,7 @@ export default function ProductsList({
               </div>
             )}
 
-            {/* 📑 Paginación */}
+            {/* Paginación */}
             {totalPages > 1 && paginatedProducts.length > 0 && (
               <div className="mt-12 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-gray-200 dark:border-gray-700 pt-6">
                 

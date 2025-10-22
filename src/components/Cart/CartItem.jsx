@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 export default function CartItem({ item, onQuantityChange, onDelete }) {
   const [quantity, setQuantity] = useState(item.quantity);
 
-  // 🔹 Disminuir cantidad
+  // Disminuir cantidad
   const handleDecrease = () => {
     if (quantity <= 0) return;
 
@@ -14,14 +14,14 @@ export default function CartItem({ item, onQuantityChange, onDelete }) {
     onQuantityChange(item.productId, newQty, "remove");
   };
 
-  // 🔹 Aumentar cantidad
+  //Aumentar cantidad
   const handleIncrease = () => {
     const newQty = quantity + 1;
     setQuantity(newQty);
     onQuantityChange(item.productId, newQty, "add");
   };
 
-  // 🔹 Eliminar producto completamente
+  // Eliminar producto completamente
   const handleDelete = () => {
     if (window.confirm(`¿Eliminar ${item.name} del carrito?`)) {
       onDelete(item.productId);
@@ -30,7 +30,7 @@ export default function CartItem({ item, onQuantityChange, onDelete }) {
 
   const totalPrice = item.price * quantity;
 
-  // 🔹 Imagen segura del backend
+  // Imagen segura del backend
   const imageSrc = item.imageUrl
     ? item.imageUrl
     : `http://localhost:8080/products/${item.productId}/image/raw`;
@@ -38,7 +38,7 @@ export default function CartItem({ item, onQuantityChange, onDelete }) {
   return (
     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 sm:p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
 
-      {/* 🖼️ Imagen del producto */}
+      {/* Imagen del producto */}
       <Link to={`/product/${item.productId}`} className="flex-shrink-0">
         <img
           src={imageSrc}
@@ -48,7 +48,7 @@ export default function CartItem({ item, onQuantityChange, onDelete }) {
         />
       </Link>
 
-      {/* 📦 Información del producto */}
+      {/* Información del producto */}
       <div className="flex-grow min-w-0 w-full sm:w-auto">
         <Link to={`/product/${item.productId}`} className="block">
           <h3 className="font-semibold text-gray-900 dark:text-white text-lg mb-2 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
@@ -82,7 +82,7 @@ export default function CartItem({ item, onQuantityChange, onDelete }) {
           <span className="text-sm font-normal text-gray-500">c/u</span>
         </p>
 
-        {/* 🎚️ Controles - Móvil */}
+        {/*  Controles - Móvil */}
         <div className="flex items-center gap-4 sm:hidden">
           <div className="flex items-center border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
             <button
@@ -112,7 +112,7 @@ export default function CartItem({ item, onQuantityChange, onDelete }) {
         </div>
       </div>
 
-      {/* 🎚️ Controles - Desktop */}
+      {/*  Controles - Desktop */}
       <div className="hidden sm:flex items-center gap-4 ml-auto">
         <div className="flex items-center border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
           <button
@@ -147,7 +147,7 @@ export default function CartItem({ item, onQuantityChange, onDelete }) {
         </button>
       </div>
 
-      {/* 💰 Subtotal - Móvil */}
+      {/* Subtotal - Móvil */}
       <div className="sm:hidden w-full pt-3 border-t border-gray-200 dark:border-gray-700">
         <div className="flex justify-between items-center">
           <span className="text-sm text-gray-600 dark:text-gray-400">

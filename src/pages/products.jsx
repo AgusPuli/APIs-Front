@@ -12,16 +12,16 @@ export default function Products() {
   useEffect(() => {
     async function fetchProducts() {
       try {
-        // ✅ URL correcta (coincide con tu backend)
+        // URL correcta (coincide con tu backend)
         const res = await fetch("http://localhost:8080/products");
         if (!res.ok) throw new Error(`Error al obtener productos: ${res.status}`);
 
         const data = await res.json();
 
-        // ✅ Maneja Page<ProductResponse> o List<ProductResponse>
+        // Maneja Page<ProductResponse> o List<ProductResponse>
         const array = Array.isArray(data) ? data : data.content || [];
 
-        // ✅ Normalización mínima
+        // Normalización mínima
         const normalized = array.map((p) => ({
           id: p.id,
           name: p.name,

@@ -33,7 +33,6 @@ export default function LoginForm() {
 
     const data = await response.json();
 
-    // ✅ usar el campo correcto del backend
     login(data.access_token);
 
     toast.success("Inicio de sesión exitoso");

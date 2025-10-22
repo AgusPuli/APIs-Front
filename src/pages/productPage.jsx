@@ -81,7 +81,7 @@ export default function ProductPage() {
 
       <section className="py-16 sm:py-20">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 lg:flex lg:gap-12">
-          {/* ✅ Imagen del producto */}
+          {/*Imagen del producto */}
           <div className="lg:w-1/2 mb-8 lg:mb-0">
             <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md border border-gray-200 dark:border-gray-700">
               <img

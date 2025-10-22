@@ -4,7 +4,7 @@ import Sidebar from "../components/Admin/Sidebar";
 import ProductSection from "../components/Admin/Product/ProductSection";
 import CategorySection from "../components/Admin/Category/CategorySection";
 import OrderSection from "../components/Admin/Order/OrderSection";
-import DiscountSection from "../components/Admin/Discount/DiscountSection"; // ✅
+import DiscountSection from "../components/Admin/Discount/DiscountSection"; 
 
 export default function Admin() {
   const [section, setSection] = useState("products");

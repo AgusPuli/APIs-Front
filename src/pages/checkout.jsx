@@ -16,7 +16,7 @@ export default function Checkout() {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
 
-  // 🏠 Datos de envío
+  // Datos de envío
   const [shippingData, setShippingData] = useState({
     fullName: user ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : "",
     email: user?.email || "",
@@ -28,7 +28,7 @@ export default function Checkout() {
     country: "Argentina",
   });
 
-  // 💳 Datos de pago (solo para UI; backend espera un PaymentRequest separado)
+  // Datos de pago (solo para UI; backend espera un PaymentRequest separado)
   const [paymentData, setPaymentData] = useState({
     cardNumber: "",
     cardHolder: "",
@@ -39,7 +39,7 @@ export default function Checkout() {
   // Totales
   const total = subtotal - discountAmount;
 
-  // 🧾 Enviar orden y luego registrar el pago
+  // Enviar orden y luego registrar el pago
   const handlePlaceOrder = async () => {
     if (!token) {
       alert("Debes iniciar sesión para finalizar la compra");

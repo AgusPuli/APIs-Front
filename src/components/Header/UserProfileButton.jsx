@@ -22,7 +22,7 @@ export default function UserProfileButton() {
   const handleDashboardClick = () => {
     if (!user) return;
 
-    // ✅ Ahora verificamos por el rol que viene del token
+    // Ahora verificamos por el rol que viene del token
     if (user.role === "ADMIN") {
       navigate("/admin");
     } else {

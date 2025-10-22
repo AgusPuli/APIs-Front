@@ -7,7 +7,7 @@ export default function ProductCard({ product }) {
   const [imageUrl, setImageUrl] = useState("/placeholder.jpg");
   const { updateQuantity } = useCart(); // 🛒 Importa función del carrito
 
-  // 🔹 Cargar imagen desde el backend
+  // Cargar imagen desde el backend
   useEffect(() => {
     const fetchImage = async () => {
       try {
@@ -32,7 +32,7 @@ export default function ProductCard({ product }) {
     };
   }, [product?.id]);
 
-  // 🛒 Agregar al carrito usando el contexto real
+  // Agregar al carrito usando el contexto real
   const handleAddToCart = async (e) => {
     e.preventDefault();
     e.stopPropagation();

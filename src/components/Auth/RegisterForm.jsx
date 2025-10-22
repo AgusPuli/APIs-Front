@@ -42,7 +42,7 @@ export default function RegisterForm() {
 
     const data = await response.json();
 
-    // ✅ usar el campo correcto
+    //   usar el campo correcto
     login(data.access_token);
 
     toast.success("Usuario registrado correctamente");

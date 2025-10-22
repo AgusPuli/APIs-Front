@@ -13,10 +13,10 @@ export default function FeaturedProducts() {
         if (!res.ok) throw new Error("Error al obtener los productos");
         const data = await res.json();
 
-        // ✅ Manejar tanto Page<ProductResponse> como List<ProductResponse>
+        // Manejar tanto Page<ProductResponse> como List<ProductResponse>
         const array = Array.isArray(data) ? data : data.content || [];
 
-        // ✅ Normalizar productos para evitar errores
+        // Normalizar productos para evitar errores
         const normalized = array.map((p) => ({
           id: p.id,
           name: p.name,
@@ -32,7 +32,7 @@ export default function FeaturedProducts() {
           featured: p.featured || false,
         }));
 
-        // ✅ Mostrar solo los 3 primeros
+        //   Mostrar solo los 3 primeros
         setProducts(normalized.slice(0, 3));
       } catch (err) {
         console.error("❌ Error cargando productos:", err);

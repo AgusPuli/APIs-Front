@@ -17,7 +17,7 @@ export function SessionProvider({ children }) {
 
         if (Date.now() < exp) {
           setToken(savedToken);
-          // 🔹 Cargar datos completos del usuario desde el backend
+          // Cargar datos completos del usuario desde el backend
           fetchUserDetails(decoded.sub, savedToken);
         } else {
           logout();
@@ -30,7 +30,7 @@ export function SessionProvider({ children }) {
     setLoading(false);
   }, []);
 
-  // 🔹 Obtener datos del usuario desde el backend
+  // Obtener datos del usuario desde el backend
   const fetchUserDetails = async (email, jwt) => {
     try {
       const res = await fetch(`http://localhost:8080/users/email/${email}`, {
@@ -43,7 +43,7 @@ export function SessionProvider({ children }) {
 
       const data = await res.json();
 
-      // 🔹 Guardar datos reales en el contexto
+      // Guardar datos reales en el contexto
       setUser({
         id: data.id,
         firstName: data.firstName,

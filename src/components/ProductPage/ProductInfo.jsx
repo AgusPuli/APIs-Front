@@ -10,7 +10,7 @@ export default function ProductInfo({ product }) {
   const [loading, setLoading] = useState(false);
 
   const { token } = useSession();
-  const { addItem, fetchCart, userId } = useCart(); // ✅ traemos el ID real
+  const { addItem, fetchCart, userId } = useCart(); // traemos el ID real
 
   const handleAddToCart = async () => {
     if (!token) {
@@ -26,7 +26,7 @@ export default function ProductInfo({ product }) {
     setLoading(true);
     try {
       const payload = {
-        userId, // ✅ se obtiene dinámicamente del contexto
+        userId, // se obtiene dinámicamente del contexto
         item: {
           productId: product.id,
           quantity: 1,

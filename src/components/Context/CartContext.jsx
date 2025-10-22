@@ -14,7 +14,7 @@ export function CartProvider({ children }) {
   const [lastPreview, setLastPreview] = useState(null);
   const [loadingDiscount, setLoadingDiscount] = useState(false);
 
-  // 🔹 Obtener carrito y userId del backend
+  // Obtener carrito y userId del backend
   const fetchCart = async () => {
     if (!token) {
       setItems([]);
@@ -45,7 +45,7 @@ export function CartProvider({ children }) {
     }
   };
 
-  // 🔹 Agregar item localmente
+  // Agregar item localmente
   const addItem = (item) => {
     setItems((prev) => {
       const existingIndex = prev.findIndex(
@@ -69,13 +69,13 @@ export function CartProvider({ children }) {
     });
   };
 
-  // 🔹 Actualizar cantidad desde los botones (+ / -)
+  // Actualizar cantidad desde los botones (+ / -)
   const updateQuantity = async (productId, newQuantity, action = "add") => {
     try {
       if (!token || !userId) return;
 
       if (action === "add") {
-        // ➕ Agregar una unidad más usando /carts/add
+        // Agregar una unidad más usando /carts/add
         const payload = {
           userId,
           item: { productId, quantity: 1 },
@@ -92,7 +92,7 @@ export function CartProvider({ children }) {
 
         if (!res.ok) throw new Error("Error al agregar producto");
       } else if (action === "remove") {
-        // ➖ Disminuir cantidad o eliminar si llega a 0
+        // Disminuir cantidad o eliminar si llega a 0
         if (newQuantity <= 0) {
           await removeItem(productId);
           return;
@@ -138,7 +138,7 @@ export function CartProvider({ children }) {
     }
   };
 
-  // 🔹 Previsualizar código de descuento
+  // Previsualizar código de descuento
   const previewCode = async (code) => {
     if (!code.trim()) return;
     
@@ -165,7 +165,7 @@ export function CartProvider({ children }) {
     }
   };
 
-  // 🔹 Aplicar código de descuento
+  // Aplicar código de descuento
   const applyCode = async (code) => {
     if (!code.trim()) return;
     
@@ -193,22 +193,22 @@ export function CartProvider({ children }) {
     }
   };
 
-  // 🔹 Calcular subtotal
+  // Calcular subtotal
   const subtotal = useMemo(() => {
     return items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   }, [items]);
 
-  // 🔹 Calcular descuento
+  // Calcular descuento
   const discountAmount = useMemo(() => {
     return appliedCoupon?.discountAmount || 0;
   }, [appliedCoupon]);
 
-  // 🔹 Calcular total
+  // Calcular total
   const total = useMemo(() => {
     return subtotal - discountAmount;
   }, [subtotal, discountAmount]);
 
-  // 🔄 Sincronizar con localStorage
+  //  Sincronizar con localStorage
   useEffect(() => {
     if (items.length > 0) {
       localStorage.setItem("cartItems", JSON.stringify(items));
@@ -217,7 +217,7 @@ export function CartProvider({ children }) {
     }
   }, [items]);
 
-  // 🔄 Cargar carrito al iniciar sesión
+  //  Cargar carrito al iniciar sesión
   useEffect(() => {
     fetchCart();
     // eslint-disable-next-line react-hooks/exhaustive-deps
