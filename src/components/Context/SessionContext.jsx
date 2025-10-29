@@ -1,3 +1,4 @@
+// SessionContext.jsx
 import { createContext, useContext, useState, useEffect } from "react";
 import { jwtDecode } from "jwt-decode";
 
@@ -10,40 +11,42 @@ export function SessionProvider({ children }) {
 
   useEffect(() => {
     const savedToken = localStorage.getItem("jwt");
-    if (savedToken) {
+
+    // IIFE async para esperar fetchUserDetails
+    (async () => {
+      if (!savedToken) {
+        setLoading(false);
+        return;
+      }
+
       try {
         const decoded = jwtDecode(savedToken);
         const exp = decoded.exp * 1000;
 
         if (Date.now() < exp) {
           setToken(savedToken);
-          // Cargar datos completos del usuario desde el backend
-          fetchUserDetails(decoded.sub, savedToken);
+          setLoading(true);
+          await fetchUserDetails(decoded.sub, savedToken);
         } else {
           logout();
         }
       } catch (err) {
         console.error("Token inválido", err);
         logout();
+      } finally {
+        setLoading(false);
       }
-    }
-    setLoading(false);
+    })();
   }, []);
 
-  // Obtener datos del usuario desde el backend
+  // Hacer que devuelva una promesa para poder await en useEffect/login
   const fetchUserDetails = async (email, jwt) => {
     try {
       const res = await fetch(`http://localhost:8080/users/email/${email}`, {
-        headers: {
-          Authorization: `Bearer ${jwt}`,
-        },
+        headers: { Authorization: `Bearer ${jwt}` },
       });
-
       if (!res.ok) throw new Error("Error obteniendo datos del usuario");
-
       const data = await res.json();
-
-      // Guardar datos reales en el contexto
       setUser({
         id: data.id,
         firstName: data.firstName,
@@ -53,17 +56,23 @@ export function SessionProvider({ children }) {
       });
     } catch (err) {
       console.error("Error al obtener datos del usuario:", err);
+      // Ante error, limpiar sesión para evitar estados inconsistentes
+      setUser(null);
     }
   };
 
-  const login = (newToken) => {
+  const login = async (newToken) => {
     try {
       const decoded = jwtDecode(newToken);
       setToken(newToken);
       localStorage.setItem("jwt", newToken);
-      fetchUserDetails(decoded.sub, newToken);
+      setLoading(true);
+      await fetchUserDetails(decoded.sub, newToken);
     } catch (err) {
       console.error("JWT inválido", err);
+      logout();
+    } finally {
+      setLoading(false);
     }
   };
 

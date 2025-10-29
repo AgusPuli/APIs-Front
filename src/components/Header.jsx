@@ -22,14 +22,18 @@ export default function Header({
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const showSearch = pathname === "/products";
 
-  const { isLoggedIn, logout } = useSession();
+  // Antes: const { isLoggedIn, logout } = useSession();
+  // Ahora también leemos user y loading para ocultar el carrito si es ADMIN
+  const { isLoggedIn, logout, user, loading } = useSession();
+
+  // Normaliza el rol para soportar "ADMIN" o "ROLE_ADMIN"
+  const isAdmin = (user?.role ?? "").replace(/^ROLE_/, "") === "ADMIN";
 
   return (
     <header className="sticky top-0 z-50 glass-effect shadow-sm bg-[#0D1029]">
       <div className="border-b border-gray-100 dark:border-gray-800">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 sm:h-20">
-            
             {/* Logo y título */}
             <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-shrink-0">
               <Logo />
@@ -45,7 +49,8 @@ export default function Header({
 
             {/* Botones de acción */}
             <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-              <CartButton />
+              {/* Oculta el carrito si está cargando la sesión o si es ADMIN */}
+              {!loading && !isAdmin && <CartButton />}
 
               {/* Botón de usuario solo en desktop */}
               <div className="hidden md:flex">
@@ -76,7 +81,6 @@ export default function Header({
                 </svg>
               </button>
             </div>
-
           </div>
         </div>
       </div>
