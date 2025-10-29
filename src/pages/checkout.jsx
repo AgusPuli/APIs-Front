@@ -41,12 +41,7 @@ export default function Checkout() {
 
   // Enviar orden y luego registrar el pago
   const handlePlaceOrder = async () => {
-    if (!token) {
-      alert("Debes iniciar sesión para finalizar la compra");
-      return;
-    }
-
-    setLoading(true);
+      setLoading(true);
     try {
       // 1) Crear la orden (endpoint que ya tenés)
       // Nota: tu backend usa el carrito del usuario, por eso hacemos POST sin body normalmente.
@@ -105,6 +100,7 @@ export default function Checkout() {
       // 3) Limpiar carrito y redirigir a detalle de orden
       if (typeof clearCart === "function") {
         await clearCart();
+        
       } else {
         console.warn("clearCart no está disponible en useCart()");
       }
