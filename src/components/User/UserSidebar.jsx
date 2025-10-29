@@ -2,10 +2,30 @@
 import { useState } from "react";
 import { FiUser, FiShoppingCart, FiMenu, FiX } from "react-icons/fi";
 
+// Icono Home igual al del sidebar de Admin
+const HomeIcon = ({ size = 20, className = "" }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+  </svg>
+);
+
 export default function Sidebar({ currentSection, setSection }) {
   const [isOpen, setIsOpen] = useState(false);
 
   const menuItems = [
+    { id: "inicio", label: "Inicio", icon: HomeIcon }, // nuevo
     { id: "orders", label: "Mis Pedidos", icon: FiShoppingCart },
     { id: "profile", label: "Mi Perfil", icon: FiUser },
   ];
@@ -46,6 +66,22 @@ export default function Sidebar({ currentSection, setSection }) {
             {menuItems.map((item) => {
               const Icon = item.icon;
               const isActive = currentSection === item.id;
+
+              // Inicio se renderiza como enlace externo a "/"
+              if (item.id === "inicio") {
+                return (
+                  <li key={item.id}>
+                    <a
+                      href="/"
+                      className="w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-all text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      <Icon size={20} />
+                      <span>{item.label}</span>
+                    </a>
+                  </li>
+                );
+              }
 
               return (
                 <li key={item.id}>
