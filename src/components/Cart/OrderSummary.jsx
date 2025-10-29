@@ -11,8 +11,7 @@ export default function OrderSummary({
 
   const shipping = 0; // Envío gratuito
   const subtotalAfterDiscount = subtotal - discountAmount;
-  const tax = subtotalAfterDiscount * 0.21; // IVA 21%
-  const total = subtotalAfterDiscount + shipping + tax;
+  const total = subtotalAfterDiscount + shipping ;
 
   const handleCheckout = () => {
     if (!isDisabled) {
@@ -47,12 +46,6 @@ export default function OrderSummary({
           <p className="font-semibold text-green-600 dark:text-green-400">
             {shipping === 0 ? "Gratis" : `$${shipping.toFixed(2)}`}
           </p>
-        </div>
-
-        {/* Impuestos */}
-        <div className="flex justify-between text-gray-700 dark:text-gray-300">
-          <p>IVA (21%)</p>
-          <p className="font-semibold">${tax.toFixed(2)}</p>
         </div>
       </div>
 

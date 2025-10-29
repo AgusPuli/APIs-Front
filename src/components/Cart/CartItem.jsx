@@ -1,9 +1,38 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FiTrash, FiMinus, FiPlus } from "react-icons/fi";
 import { Link } from "react-router-dom";
 
 export default function CartItem({ item, onQuantityChange, onDelete }) {
   const [quantity, setQuantity] = useState(item.quantity);
+  const [productStock, setProductStock] = useState(null);
+  const [loadingStock, setLoadingStock] = useState(true);
+
+  // Obtener stock del producto
+  useEffect(() => {
+    const fetchStock = async () => {
+      try {
+        const res = await fetch(`http://localhost:8080/products/${item.productId}`);
+        if (res.ok) {
+          const product = await res.json();
+          setProductStock(product.stock);
+        }
+      } catch (err) {
+        console.error("Error al obtener stock:", err);
+      } finally {
+        setLoadingStock(false);
+      }
+    };
+
+    fetchStock();
+  }, [item.productId]);
+
+  // Sincronizar quantity cuando item.quantity cambie (por ejemplo, después de fetchCart)
+  useEffect(() => {
+    setQuantity(item.quantity);
+  }, [item.quantity]);
+
+  // Verificar si se puede incrementar
+  const canIncrement = !loadingStock && productStock !== null && quantity < productStock;
 
   // Disminuir cantidad
   const handleDecrease = () => {
@@ -14,8 +43,10 @@ export default function CartItem({ item, onQuantityChange, onDelete }) {
     onQuantityChange(item.productId, newQty, "remove");
   };
 
-  //Aumentar cantidad
+  // Aumentar cantidad
   const handleIncrease = () => {
+    if (!canIncrement) return;
+
     const newQty = quantity + 1;
     setQuantity(newQty);
     onQuantityChange(item.productId, newQty, "add");
@@ -77,18 +108,35 @@ export default function CartItem({ item, onQuantityChange, onDelete }) {
         </div>
 
         {/* Precio unitario */}
-        <p className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+        <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
           ${item.price.toFixed(2)}{" "}
           <span className="text-sm font-normal text-gray-500">c/u</span>
         </p>
 
-        {/*  Controles - Móvil */}
+        {/* Indicador de stock */}
+        {!loadingStock && productStock !== null && (
+          <p className={`text-xs font-medium mb-3 ${
+            productStock > 10 
+              ? "text-green-600 dark:text-green-400" 
+              : productStock > 0 
+              ? "text-orange-600 dark:text-orange-400" 
+              : "text-red-600 dark:text-red-400"
+          }`}>
+            {productStock > 10 
+              ? `✓ En stock` 
+              : productStock > 0 
+              ? `⚠️ Solo quedan ${productStock} unidades` 
+              : "❌ Sin stock"}
+          </p>
+        )}
+
+        {/* Controles - Móvil */}
         <div className="flex items-center gap-4 sm:hidden">
           <div className="flex items-center border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
             <button
               onClick={handleDecrease}
               disabled={quantity <= 0}
-              className="px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
+              className="px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <FiMinus size={16} />
             </button>
@@ -97,7 +145,9 @@ export default function CartItem({ item, onQuantityChange, onDelete }) {
             </span>
             <button
               onClick={handleIncrease}
-              className="px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              disabled={!canIncrement}
+              title={!canIncrement ? "Stock máximo alcanzado" : ""}
+              className="px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <FiPlus size={16} />
             </button>
@@ -112,13 +162,13 @@ export default function CartItem({ item, onQuantityChange, onDelete }) {
         </div>
       </div>
 
-      {/*  Controles - Desktop */}
+      {/* Controles - Desktop */}
       <div className="hidden sm:flex items-center gap-4 ml-auto">
         <div className="flex items-center border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
           <button
             onClick={handleDecrease}
             disabled={quantity <= 0}
-            className="px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
+            className="px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <FiMinus size={16} />
           </button>
@@ -127,7 +177,9 @@ export default function CartItem({ item, onQuantityChange, onDelete }) {
           </span>
           <button
             onClick={handleIncrease}
-            className="px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            disabled={!canIncrement}
+            title={!canIncrement ? "Stock máximo alcanzado" : ""}
+            className="px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <FiPlus size={16} />
           </button>

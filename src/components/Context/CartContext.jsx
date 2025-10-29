@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useMemo } from "react";
 import { useSession } from "./SessionContext";
+import toast from "react-hot-toast"; // ← IMPORTAR
 
 const CartContext = createContext();
 
@@ -45,8 +46,52 @@ export function CartProvider({ children }) {
     }
   };
 
-  // Agregar item localmente
-  const addItem = (item) => {
+  // 🔹 Función para verificar stock antes de agregar
+  const checkStock = async (productId, requestedQuantity) => {
+    try {
+      const res = await fetch(`http://localhost:8080/products/${productId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) throw new Error("Error al verificar stock");
+
+      const product = await res.json();
+      return {
+        available: product.stock >= requestedQuantity,
+        stock: product.stock,
+        productName: product.name
+      };
+    } catch (err) {
+      console.error("Error al verificar stock:", err);
+      return { available: false, stock: 0 };
+    }
+  };
+
+  // Agregar item localmente con validación de stock
+  const addItem = async (item) => {
+    // Calcular cantidad total que se tendría
+    const existingItem = items.find(
+      (i) =>
+        i.productId === item.productId &&
+        i.selectedColor === item.selectedColor &&
+        i.selectedStorage === item.selectedStorage
+    );
+    
+    const currentQuantity = existingItem ? existingItem.quantity : 0;
+    const totalQuantity = currentQuantity + item.quantity;
+
+    // Verificar stock
+    const stockCheck = await checkStock(item.productId, totalQuantity);
+    
+    if (!stockCheck.available) {
+      toast.error(
+        `Stock insuficiente. Solo hay ${stockCheck.stock} unidades disponibles de ${stockCheck.productName || 'este producto'}`,
+        { duration: 4000 }
+      );
+      return false;
+    }
+
+    // Si hay stock suficiente, agregar
     setItems((prev) => {
       const existingIndex = prev.findIndex(
         (i) =>
@@ -56,17 +101,18 @@ export function CartProvider({ children }) {
       );
       
       if (existingIndex !== -1) {
-        // Ya existe, incrementar cantidad
         return prev.map((i, idx) =>
           idx === existingIndex 
             ? { ...i, quantity: i.quantity + item.quantity } 
             : i
         );
       } else {
-        // No existe, agregar nuevo
         return [...prev, item];
       }
     });
+    
+    toast.success("Producto agregado al carrito", { duration: 2000 });
+    return true;
   };
 
   // Actualizar cantidad desde los botones (+ / -)
@@ -75,6 +121,22 @@ export function CartProvider({ children }) {
       if (!token || !userId) return;
 
       if (action === "add") {
+        // 🔹 Verificar stock antes de agregar
+        const currentItem = items.find(i => i.productId === productId);
+        const requestedQuantity = currentItem ? currentItem.quantity + 1 : 1;
+        
+        const stockCheck = await checkStock(productId, requestedQuantity);
+        
+        if (!stockCheck.available) {
+          toast.error(
+            `Stock insuficiente. Solo hay ${stockCheck.stock} unidades disponibles`,
+            { duration: 3000 }
+          );
+          // Refrescar para sincronizar con el backend
+          await fetchCart();
+          return;
+        }
+
         // Agregar una unidad más usando /carts/add
         const payload = {
           userId,
@@ -90,7 +152,13 @@ export function CartProvider({ children }) {
           body: JSON.stringify(payload),
         });
 
-        if (!res.ok) throw new Error("Error al agregar producto");
+        if (!res.ok) {
+          const errorData = await res.json();
+          // Refrescar para sincronizar
+          await fetchCart();
+          throw new Error(errorData.message || "Error al agregar producto");
+        }
+        
       } else if (action === "remove") {
         // Disminuir cantidad o eliminar si llega a 0
         if (newQuantity <= 0) {
@@ -113,6 +181,9 @@ export function CartProvider({ children }) {
       await fetchCart();
     } catch (err) {
       console.error("Error al actualizar cantidad:", err);
+      toast.error(err.message || "Error al actualizar cantidad");
+      // Refrescar para asegurar sincronización
+      await fetchCart();
     }
   };
 
@@ -133,8 +204,10 @@ export function CartProvider({ children }) {
       );
 
       if (!res.ok) throw new Error("No se pudo eliminar el producto");
+      toast.success("Producto eliminado del carrito");
     } catch (err) {
       console.error(err);
+      toast.error("Error al eliminar producto");
     }
   };
 
@@ -185,8 +258,10 @@ export function CartProvider({ children }) {
       const data = await res.json();
       setAppliedCoupon({ code, discountAmount: data.discountAmount || 0 });
       setLastPreview(null);
+      toast.success("Cupón aplicado correctamente");
     } catch (err) {
       console.error("Error al aplicar cupón:", err);
+      toast.error("Error al aplicar cupón");
       throw err;
     } finally {
       setLoadingDiscount(false);
