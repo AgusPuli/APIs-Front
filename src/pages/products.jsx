@@ -12,22 +12,19 @@ export default function Products() {
   useEffect(() => {
     async function fetchProducts() {
       try {
-        // URL correcta (coincide con tu backend)
         const res = await fetch("http://localhost:8080/products");
         if (!res.ok) throw new Error(`Error al obtener productos: ${res.status}`);
 
         const data = await res.json();
-
-        // Maneja Page<ProductResponse> o List<ProductResponse>
         const array = Array.isArray(data) ? data : data.content || [];
 
-        // Normalización mínima
         const normalized = array.map((p) => ({
           id: p.id,
           name: p.name,
           description: p.description,
           price: p.price,
           stock: p.stock,
+          active: p.active, // <- importante
           category: p.category?.name || "Sin categoría",
           images: ["/placeholder.jpg"],
           subcategories: [],
@@ -38,7 +35,7 @@ export default function Products() {
 
         setProducts(normalized);
       } catch (err) {
-        console.error("❌ Error obteniendo productos:", err);
+        console.error("Error obteniendo productos:", err);
         setProducts([]);
       } finally {
         setLoading(false);
@@ -48,7 +45,6 @@ export default function Products() {
     fetchProducts();
   }, []);
 
-  // Resetear página cuando cambian filtros o búsqueda
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, selectedCategory, selectedSubcategory]);

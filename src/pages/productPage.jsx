@@ -14,7 +14,7 @@ export default function ProductPage() {
 
   useEffect(() => {
     if (!productId) {
-      console.warn("⚠️ No se recibió productId válido en la URL");
+      console.warn("No se recibió productId válido en la URL");
       setLoading(false);
       return;
     }
@@ -31,6 +31,7 @@ export default function ProductPage() {
           description: data.description || "Sin descripción disponible.",
           price: data.price || 0,
           stock: data.stock || 0,
+          active: !!data.active, // <- importante
           category: data.category?.name || "Sin categoría",
           specifications: {
             Precio: `$${data.price?.toLocaleString("es-AR")}`,
@@ -45,7 +46,6 @@ export default function ProductPage() {
 
         setProduct(normalized);
 
-        // Cargar imagen principal
         const imgRes = await fetch(`http://localhost:8080/products/${productId}/image/raw`);
         if (imgRes.ok) {
           const blob = await imgRes.blob();
@@ -55,7 +55,7 @@ export default function ProductPage() {
           setImageUrl("/placeholder.jpg");
         }
       } catch (err) {
-        console.error("❌ Error cargando producto:", err);
+        console.error("Error cargando producto:", err);
         setProduct(null);
       } finally {
         setLoading(false);
@@ -67,6 +67,7 @@ export default function ProductPage() {
     return () => {
       if (imageUrl.startsWith("blob:")) URL.revokeObjectURL(imageUrl);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productId]);
 
   if (loading)
@@ -77,11 +78,18 @@ export default function ProductPage() {
 
   return (
     <div className="bg-gray-50 dark:bg-gray-900 min-h-screen">
-      
+      {/* Banner si está inactivo */}
+      {!product.active && (
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+          <div className="rounded-lg bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 p-3 text-yellow-800 dark:text-yellow-200">
+            Este producto no está disponible actualmente.
+          </div>
+        </div>
+      )}
 
       <section className="py-16 sm:py-20">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 lg:flex lg:gap-12">
-          {/*Imagen del producto */}
+          {/* Imagen del producto */}
           <div className="lg:w-1/2 mb-8 lg:mb-0">
             <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md border border-gray-200 dark:border-gray-700">
               <img
@@ -95,7 +103,8 @@ export default function ProductPage() {
 
           {/* Información */}
           <div className="lg:w-1/2 flex flex-col gap-6">
-            <ProductInfo product={product} />
+            <ProductInfo product={product} canBuy={product.active === true || product.active === 1} />
+
 
             <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
               <ProductSpecs product={product} />
