@@ -19,6 +19,7 @@ import { Toaster } from "react-hot-toast";
 import PaidOrder from "./pages/PaidOrder";
 
 import "./index.css";
+import { AuthProvider } from "./components/Context/AuthContext";
 
 function AppLayout() {
   const location = useLocation();
@@ -32,6 +33,7 @@ function AppLayout() {
       {!hideLayout && <Header />}
 
       <main className={hideLayout ? "" : "min-h-screen"}>
+       <AuthProvider>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/products" element={<Products />} />
@@ -46,6 +48,7 @@ function AppLayout() {
           <Route path="/orders" element={<OrdersPage />} />
           <Route path="/orders/:id" element={<PaidOrder />} />
         </Routes>
+        </AuthProvider> 
       </main>
 
       {/* Footer visible solo si NO estás en admin o user */}

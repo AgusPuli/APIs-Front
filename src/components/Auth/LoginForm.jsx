@@ -1,104 +1,92 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSession } from "../Context/SessionContext";
+import { useAuth } from "../Context/AuthContext"; 
 import toast from "react-hot-toast";
 
 export default function LoginForm() {
   const navigate = useNavigate();
   const { login } = useSession();
+  const { sharedEmail, setSharedEmail } = useAuth(); 
 
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  setLoading(true);
+    e.preventDefault();
+    setLoading(true);
 
-  try {
-    const response = await fetch("http://localhost:8080/auth/authenticate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
+    try {
+      const response = await fetch("http://localhost:8080/auth/authenticate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: sharedEmail, password }), 
+      });
 
-    if (!response.ok) {
-      let errorMsg = "Credenciales incorrectas";
-      try {
-        const errorData = await response.json();
-        errorMsg = errorData.message || errorMsg;
-      } catch {}
-      throw new Error(errorMsg);
+      if (!response.ok) {
+        let errorMsg = "Credenciales incorrectas";
+        try {
+          const errorData = await response.json();
+          errorMsg = errorData.message || errorMsg;
+        } catch {}
+        throw new Error(errorMsg);
+      }
+
+      const data = await response.json();
+      login(data.access_token);
+      toast.success("Inicio de sesión exitoso");
+      navigate("/");
+    } catch (err) {
+      toast.error(err.message || "Error al iniciar sesión");
+    } finally {
+      setLoading(false);
     }
-
-    const data = await response.json();
-
-    login(data.access_token);
-
-    toast.success("Inicio de sesión exitoso");
-
-    navigate("/"); // redirige al home o al panel según prefieras
-  } catch (err) {
-    toast.error(err.message || "Error al iniciar sesión");
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   return (
     <form onSubmit={handleSubmit} className="mt-8 space-y-6">
       <div className="space-y-4 rounded-md shadow-sm">
         <div>
-          <label htmlFor="email" className="sr-only">
-            Correo electrónico
-          </label>
           <input
-            id="email"
             type="email"
             required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            value={sharedEmail} 
+            onChange={(e) => setSharedEmail(e.target.value)} 
             placeholder="Correo electrónico"
-            className="form-input relative block w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-background-light dark:bg-background-dark px-3 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+            className="form-input relative block w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-background-light dark:bg-background-dark px-3 py-3"
           />
         </div>
+
         <div>
-          <label htmlFor="password" className="sr-only">
-            Contraseña
-          </label>
           <input
-            id="password"
             type="password"
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Contraseña"
-            className="form-input relative block w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-background-light dark:bg-background-dark px-3 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+            className="form-input relative block w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-background-light dark:bg-background-dark px-3 py-3"
           />
         </div>
       </div>
 
-      <div className="flex items-center justify-between">
-        <div className="text-sm">
-          <a
-            href="#"
-            className="font-medium text-primary hover:text-primary/80"
-          >
-            ¿Olvidó su contraseña?
-          </a>
-        </div>
-      </div>
+      <button
+        type="submit"
+        disabled={loading}
+        className="group relative flex w-full justify-center rounded-lg bg-primary py-3 text-white font-semibold"
+      >
+        {loading ? "Cargando..." : "Iniciar Sesión"}
+      </button>
 
-      <div>
+      <p className="text-sm text-center mt-2">
+        ¿No tienes cuenta?{" "}
         <button
-          type="submit"
-          disabled={loading}
-          className="group relative flex w-full justify-center rounded-lg border border-transparent bg-primary py-3 px-4 text-sm font-semibold text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-background-dark disabled:opacity-50"
+          type="button"
+          className="text-primary hover:underline"
+          onClick={() => navigate("/register")}
         >
-          {loading ? "Cargando..." : "Iniciar Sesión"}
+          Registrate
         </button>
-      </div>
+      </p>
     </form>
   );
 }
