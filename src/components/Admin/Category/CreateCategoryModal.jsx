@@ -1,15 +1,14 @@
-// src/components/Admin/Category/CreateCategoryModal.jsx
 import { useState, useRef, useEffect } from "react";
 import { FiX } from "react-icons/fi";
 
 export default function CreateCategoryModal({ token, onClose, onCategoryCreated }) {
+  const [types, setTypes] = useState([]); // 🔹 Lista de enums desde el backend
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
-
   const modalRef = useRef(null);
 
-  // Cerrar modal al hacer clic fuera
+  // 🔹 Cerrar modal al hacer clic fuera
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (modalRef.current && !modalRef.current.contains(e.target)) {
@@ -20,6 +19,23 @@ export default function CreateCategoryModal({ token, onClose, onCategoryCreated 
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [onClose]);
 
+  // 🔹 Obtener los enums del backend (CategoryType)
+  useEffect(() => {
+    const fetchCategoryTypes = async () => {
+      try {
+        const res = await fetch("http://localhost:8080/categories/types");
+        if (!res.ok) throw new Error(`Error ${res.status}`);
+        const data = await res.json();
+        setTypes(data);
+      } catch (err) {
+        console.error("❌ Error al cargar los tipos de categoría:", err);
+        setTypes([]);
+      }
+    };
+    fetchCategoryTypes();
+  }, []);
+
+  // 🔹 Crear categoría
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -32,8 +48,8 @@ export default function CreateCategoryModal({ token, onClose, onCategoryCreated 
           Authorization: token ? `Bearer ${token}` : "",
         },
         body: JSON.stringify({
-          name, // debe ser uno de los valores del enum CategoryType
-          description,
+          name,         // uno de los valores del enum CategoryType
+          description,  // texto ingresado por el usuario
         }),
       });
 
@@ -85,10 +101,11 @@ export default function CreateCategoryModal({ token, onClose, onCategoryCreated 
               required
             >
               <option value="">Seleccionar Tipo</option>
-              <option value="SMARTPHONE">SMARTPHONE</option>
-              <option value="TABLET">TABLET</option>
-              <option value="LAPTOP">LAPTOP</option>
-              <option value="ACCESSORY">ACCESSORY</option>
+              {types.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -103,6 +120,7 @@ export default function CreateCategoryModal({ token, onClose, onCategoryCreated 
               rows={3}
               placeholder="Breve descripción de esta categoría"
               className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+              required
             />
           </div>
 
