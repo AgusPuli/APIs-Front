@@ -1,5 +1,9 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+
+import { fetchProductById } from "../store/slices/productSlice.js";
+
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import ProductInfo from "../components/ProductPage/ProductInfo";
@@ -8,76 +12,62 @@ import ProductReviews from "../components/ProductPage/ProductReviews";
 
 export default function ProductPage() {
   const { productId } = useParams();
-  const [product, setProduct] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const dispatch = useDispatch();
+
+  // 🔹 Estado en Redux
+  const { selected: product, loadingSelected, error } = useSelector(
+    (state) => state.products
+  );
+
+  // 🔹 Estado local solo para la imagen (opcional mantenerlo así)
   const [imageUrl, setImageUrl] = useState("/placeholder.jpg");
 
+  // 🧠 Cargar el producto desde Redux
   useEffect(() => {
-    if (!productId) {
-      console.warn("No se recibió productId válido en la URL");
-      setLoading(false);
-      return;
+    if (productId) {
+      dispatch(fetchProductById(productId));
     }
+  }, [productId, dispatch]);
 
-    async function fetchProduct() {
+  // 🧠 Cargar imagen raw
+  useEffect(() => {
+    async function fetchImage() {
       try {
-        const res = await fetch(`http://localhost:8080/products/${productId}`);
-        if (!res.ok) throw new Error(`Error al obtener producto: ${res.status}`);
-        const data = await res.json();
-
-        const normalized = {
-          id: data.id,
-          name: data.name,
-          description: data.description || "Sin descripción disponible.",
-          price: data.price || 0,
-          stock: data.stock || 0,
-          active: !!data.active, // <- importante
-          category: data.category?.name || "Sin categoría",
-          specifications: {
-            Precio: `$${data.price?.toLocaleString("es-AR")}`,
-            Stock: data.stock,
-            Categoría: data.category?.name,
-          },
-          reviews: [
-            { user: "Juan", rating: 5, comment: "Excelente producto!", date: "2025-10-18" },
-            { user: "María", rating: 4, comment: "Muy bueno, lo recomiendo.", date: "2025-10-17" },
-          ],
-        };
-
-        setProduct(normalized);
-
-        const imgRes = await fetch(`http://localhost:8080/products/${productId}/image/raw`);
-        if (imgRes.ok) {
-          const blob = await imgRes.blob();
-          const url = URL.createObjectURL(blob);
-          setImageUrl(url);
-        } else {
-          setImageUrl("/placeholder.jpg");
-        }
-      } catch (err) {
-        console.error("Error cargando producto:", err);
-        setProduct(null);
-      } finally {
-        setLoading(false);
+        const res = await fetch(
+          `http://localhost:8080/products/${productId}/image/raw`
+        );
+        if (!res.ok) throw new Error("No image");
+        const blob = await res.blob();
+        setImageUrl(URL.createObjectURL(blob));
+      } catch {
+        setImageUrl("/placeholder.jpg");
       }
     }
 
-    fetchProduct();
-
-    return () => {
-      if (imageUrl.startsWith("blob:")) URL.revokeObjectURL(imageUrl);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (productId) fetchImage();
   }, [productId]);
 
-  if (loading)
-    return <p className="text-center py-20 text-gray-500">Cargando producto...</p>;
+  // 🔹 Loading
+  if (loadingSelected) {
+    return (
+      <p className="text-center py-20 text-gray-500">
+        Cargando producto...
+      </p>
+    );
+  }
 
-  if (!product)
-    return <p className="text-center py-20 text-red-500">Producto no encontrado.</p>;
+  // 🔹 Error o producto no encontrado
+  if (error || !product) {
+    return (
+      <p className="text-center py-20 text-red-500">
+        Producto no encontrado.
+      </p>
+    );
+  }
 
   return (
     <div className="bg-gray-50 dark:bg-gray-900 min-h-screen">
+
       {/* Banner si está inactivo */}
       {!product.active && (
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-6">
@@ -89,7 +79,8 @@ export default function ProductPage() {
 
       <section className="py-16 sm:py-20">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 lg:flex lg:gap-12">
-          {/* Imagen del producto */}
+
+          {/* Imagen */}
           <div className="lg:w-1/2 mb-8 lg:mb-0">
             <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md border border-gray-200 dark:border-gray-700">
               <img
@@ -103,8 +94,11 @@ export default function ProductPage() {
 
           {/* Información */}
           <div className="lg:w-1/2 flex flex-col gap-6">
-            <ProductInfo product={product} canBuy={product.active === true || product.active === 1} />
 
+            <ProductInfo
+              product={product}
+              canBuy={product.active === true}
+            />
 
             <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
               <ProductSpecs product={product} />

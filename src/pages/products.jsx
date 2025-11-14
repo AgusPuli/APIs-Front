@@ -1,50 +1,28 @@
 import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchProducts } from "../store/slices/productSlice.js";
 import ProductsList from "../components/Products/ProductList";
 
 export default function Products() {
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const dispatch = useDispatch();
+
+  // 🔹 Redux state
+  const { list: products, loading, error } = useSelector(
+    (state) => state.products
+  );
+
+  // 🔹 Estado local solo para UI (filtros)
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedSubcategory, setSelectedSubcategory] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
+  // 🧠 Cargar productos solo una vez
   useEffect(() => {
-    async function fetchProducts() {
-      try {
-        const res = await fetch("http://localhost:8080/products");
-        if (!res.ok) throw new Error(`Error al obtener productos: ${res.status}`);
+    dispatch(fetchProducts());
+  }, [dispatch]);
 
-        const data = await res.json();
-        const array = Array.isArray(data) ? data : data.content || [];
-
-        const normalized = array.map((p) => ({
-          id: p.id,
-          name: p.name,
-          description: p.description,
-          price: p.price,
-          stock: p.stock,
-          active: p.active, // <- importante
-          category: p.category?.name || "Sin categoría",
-          images: ["/placeholder.jpg"],
-          subcategories: [],
-          colors: [],
-          storageOptions: [],
-          featured: false,
-        }));
-
-        setProducts(normalized);
-      } catch (err) {
-        console.error("Error obteniendo productos:", err);
-        setProducts([]);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchProducts();
-  }, []);
-
+  // Resetear página al cambiar los filtros
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, selectedCategory, selectedSubcategory]);
@@ -62,11 +40,21 @@ export default function Products() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <p className="text-gray-600 dark:text-gray-400 text-lg">
+          Error: {error}
+        </p>
+      </div>
+    );
+  }
+
   if (products.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <p className="text-gray-600 dark:text-gray-400 text-lg">
-          No hay productos disponibles en la base de datos.
+          No hay productos disponibles.
         </p>
       </div>
     );

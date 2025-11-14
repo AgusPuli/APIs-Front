@@ -1,115 +1,76 @@
-// src/components/Admin/Product/ProductSection.jsx
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchProducts, toggleProductActive } from "../../../store/slices/productSlice";
 import ProductTable from "./ProductTable";
 import CreateProductModal from "./ProductModal/ProductCreateModal";
 import EditProductModal from "./ProductModal/EditProductModal";
-//  modal para confirmar Habilitar/Deshabilitar
 import ToggleActiveModal from "./ProductModal/ToggleActiveModal";
 import { useSession } from "../../Context/SessionContext";
 import { FiPlus } from "react-icons/fi";
 
 export default function ProductSection() {
   const { token } = useSession();
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const dispatch = useDispatch();
 
+  // Redux state
+  const { list: products, loading, error } = useSelector((state) => state.products);
+
+  // Modals (local UI only)
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editProduct, setEditProduct] = useState(null);
+  const [toggleTarget, setToggleTarget] = useState(null);
 
-  // Estado del toggle
-  const [toggleTarget, setToggleTarget] = useState(null); // { product, nextActive }
-  const [toggling, setToggling] = useState(false);
-
-  // Obtener productos
-  const fetchProducts = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("http://localhost:8080/products", {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (!res.ok) throw new Error(`Error HTTP ${res.status}`);
-      const data = await res.json();
-
-      const array = Array.isArray(data) ? data : data.content || [];
-
-      // Normalización de campos
-      const normalized = array.map((p) => ({
-        ...p,
-        category: typeof p.category === "object"
-          ? p.category?.name || "Sin categoría"
-          : p.category || "Sin categoría",
-        active: typeof p.active === "boolean" ? p.active : true,
-      }));
-
-      setProducts(normalized);
-    } catch (err) {
-      console.error("Error al obtener productos:", err);
-      alert("Error al cargar los productos");
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Cargar productos al iniciar
   useEffect(() => {
-    fetchProducts();
-  }, [token]);
+    if (token) dispatch(fetchProducts(token));
+  }, [token, dispatch]);
 
-  const handleProductCreated = async () => {
+  // Callback para creación
+  const handleProductCreated = () => {
     setShowCreateModal(false);
-    await fetchProducts();
+    dispatch(fetchProducts(token));
     alert("Producto creado exitosamente");
   };
 
-  const handleProductUpdated = async () => {
+  // Callback para actualización
+  const handleProductUpdated = () => {
     setEditProduct(null);
-    await fetchProducts();
+    dispatch(fetchProducts(token));
     alert("Producto actualizado exitosamente");
   };
 
-  // Abrir modal de confirmación de toggle
+  // Abrir modal de activar/desactivar
   const openToggleModal = (product, nextActive) => {
     setToggleTarget({ product, nextActive });
   };
 
-  const handleConfirmToggle = async () => {
+  // Confirmar toggle usando Redux
+  const handleConfirmToggle = () => {
     if (!toggleTarget) return;
+
     const { product, nextActive } = toggleTarget;
-    setToggling(true);
 
-    try {
-      const url = `http://localhost:8080/products/${product.id}/active?active=${nextActive}`;
-      const res = await fetch(url, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+    dispatch(
+      toggleProductActive({
+        productId: product.id,
+        active: nextActive,
+        token: token,
+      })
+    )
+      .unwrap()
+      .then(() => {
+        setToggleTarget(null);
+        alert(nextActive ? "Producto habilitado" : "Producto deshabilitado");
+      })
+      .catch((err) => {
+        console.error("Error toggle:", err);
+        alert("No se pudo cambiar el estado");
       });
-      if (!res.ok) {
-        let msg = `Error HTTP ${res.status}`;
-        try {
-          const data = await res.json();
-          msg = data.message || data.error || msg;
-        } catch {
-          const txt = await res.text();
-          if (txt) msg = txt;
-        }
-        throw new Error(msg);
-      }
-
-      await fetchProducts();
-      setToggleTarget(null);
-      alert(nextActive ? "Producto habilitado" : "Producto deshabilitado");
-    } catch (err) {
-      console.error("Error al cambiar estado:", err);
-      alert(`No se pudo cambiar el estado: ${err.message}`);
-    } finally {
-      setToggling(false);
-    }
   };
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Productos</h2>
@@ -123,23 +84,26 @@ export default function ProductSection() {
         </button>
       </div>
 
+      {/* Contenido */}
       {loading ? (
         <div className="text-center py-12">
           <div className="spinner mx-auto mb-4"></div>
           <p className="text-gray-600 dark:text-gray-400">Cargando productos...</p>
         </div>
+      ) : error ? (
+        <div className="text-center text-red-500">{error}</div>
       ) : (
         <ProductTable
           products={products}
           onEdit={(p) => setEditProduct(p)}
-          // Nuevo: callback de toggle
           onToggle={(p, nextActive) => openToggleModal(p, nextActive)}
         />
       )}
 
+      {/* Modales */}
       {showCreateModal && (
         <CreateProductModal
-          token={token || ""}
+          token={token}
           onClose={() => setShowCreateModal(false)}
           onProductCreated={handleProductCreated}
         />
@@ -147,7 +111,7 @@ export default function ProductSection() {
 
       {editProduct && (
         <EditProductModal
-          token={token || ""}
+          token={token}
           product={editProduct}
           onClose={() => setEditProduct(null)}
           onProductUpdated={handleProductUpdated}
@@ -160,7 +124,7 @@ export default function ProductSection() {
           targetActive={toggleTarget.nextActive}
           onClose={() => setToggleTarget(null)}
           onConfirm={handleConfirmToggle}
-          loading={toggling}
+          loading={loading} // usa loading global
         />
       )}
     </div>

@@ -1,8 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 import { FiX } from "react-icons/fi";
 import ProductBasicInfo from "./ProductBasicInfo";
+import { useDispatch, useSelector } from "react-redux";
+import { createProduct } from "../../../../store/slices/productSlice";
 
-export default function ProductCreateModal({ token, onClose, onProductCreated }) {
+export default function ProductCreateModal({ token, onClose }) {
+  const dispatch = useDispatch();
+  const { loading } = useSelector((state) => state.products);
+
   const [form, setForm] = useState({
     name: "",
     description: "",
@@ -11,82 +16,38 @@ export default function ProductCreateModal({ token, onClose, onProductCreated })
     category: "",
   });
 
-  const [categories, setCategories] = useState([]); // 🔹 Se llena desde el backend
+  const [categories, setCategories] = useState([]);
   const [imageFile, setImageFile] = useState(null);
-  const [loading, setLoading] = useState(false);
   const modalRef = useRef(null);
 
-  // ✅ Obtener categorías desde el backend (GET /categories)
+  // 🔹 Obtener categorías
   useEffect(() => {
     const fetchCategories = async () => {
       try {
         const res = await fetch("http://localhost:8080/categories");
         if (!res.ok) throw new Error(`Error ${res.status}`);
         const data = await res.json();
-        setCategories(data); // 🔹 Guardamos lista completa con id, name, description
+        setCategories(data);
       } catch (err) {
         console.error("❌ Error cargando categorías:", err);
-        setCategories([]);
       }
     };
     fetchCategories();
   }, []);
 
-  // 🧠 Crear producto y subir imagen
-  const handleSubmit = async (e) => {
+  // ✅ Crear producto (con Redux)
+  const handleSubmit = (e) => {
     e.preventDefault();
-    setLoading(true);
-
-    try {
-      // 1️⃣ Crear el producto con categoría seleccionada
-      const res = await fetch("http://localhost:8080/products", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: token ? `Bearer ${token}` : "",
-        },
-        body: JSON.stringify({
-          name: form.name,
-          description: form.description,
-          price: parseFloat(form.price),
-          stock: parseInt(form.stock),
-          category: form.category, // 🔹 Mandamos el enum (ej. "APPLE")
-        }),
+    dispatch(createProduct({ form, token, imageFile }))
+      .unwrap()
+      .then(() => {
+        alert("✅ Producto creado correctamente");
+        onClose();
+      })
+      .catch((err) => {
+        console.error("Error al crear producto:", err);
+        alert("❌ Error al crear el producto");
       });
-
-      if (!res.ok) throw new Error(`Error al crear producto: ${res.status}`);
-      const created = await res.json();
-
-      // 2️⃣ Subir imagen si hay
-      if (imageFile) {
-        const formData = new FormData();
-        formData.append("file", imageFile);
-        formData.append("name", form.name);
-
-        const imgRes = await fetch(
-          `http://localhost:8080/products/${created.id}/image`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: token ? `Bearer ${token}` : "",
-            },
-            body: formData,
-          }
-        );
-
-        if (!imgRes.ok)
-          throw new Error(`Error subiendo imagen: ${imgRes.status}`);
-      }
-
-      alert("✅ Producto creado correctamente");
-      onProductCreated(created);
-      onClose();
-    } catch (err) {
-      console.error("Error al crear producto:", err);
-      alert("❌ Error al crear el producto");
-    } finally {
-      setLoading(false);
-    }
   };
 
   return (
@@ -121,7 +82,7 @@ export default function ProductCreateModal({ token, onClose, onProductCreated })
             setStock={(v) => setForm((f) => ({ ...f, stock: v }))}
           />
 
-          {/* 🔹 Selector de categoría dinámico */}
+          {/* Categoría */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Categoría

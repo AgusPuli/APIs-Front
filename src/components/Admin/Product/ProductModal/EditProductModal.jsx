@@ -1,8 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { FiX } from "react-icons/fi";
 import ProductBasicInfo from "./ProductBasicInfo";
-
+import { useDispatch, useSelector } from "react-redux";
+import { updateProduct } from "../../../../store/slices/productSlice";
 export default function EditProductModal({ token, product, onClose, onProductUpdated }) {
+  const dispatch = useDispatch();
+  const { loading } = useSelector((state) => state.products);
+
   const [form, setForm] = useState({
     name: product.name || "",
     description: product.description || "",
@@ -11,20 +15,19 @@ export default function EditProductModal({ token, product, onClose, onProductUpd
     category: product.category || "",
   });
 
-  const [imageFile, setImageFile] = useState(null); // ✅ nueva imagen seleccionada
+  const [imageFile, setImageFile] = useState(null);
   const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [loadingCategories, setLoadingCategories] = useState(true);
+
   const modalRef = useRef(null);
 
-  // 📡 Obtener categorías desde el backend
+  // 📡 Obtener categorías desde backend
   useEffect(() => {
     async function fetchCategories() {
       try {
         const res = await fetch("http://localhost:8080/categories", {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
-        if (!res.ok) throw new Error(`Error HTTP ${res.status}`);
         const data = await res.json();
         setCategories(data || []);
       } catch (err) {
@@ -37,7 +40,7 @@ export default function EditProductModal({ token, product, onClose, onProductUpd
     fetchCategories();
   }, [token]);
 
-  // 🧩 Cerrar modal al hacer clic fuera
+  // 🧩 Cerrar modal clic fuera
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (modalRef.current && !modalRef.current.contains(e.target)) onClose();
@@ -46,7 +49,7 @@ export default function EditProductModal({ token, product, onClose, onProductUpd
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [onClose]);
 
-  // 🧩 Cerrar con tecla Escape
+  // 🧩 Cerrar con Escape
   useEffect(() => {
     const handleEscape = (e) => {
       if (e.key === "Escape") onClose();
@@ -55,62 +58,28 @@ export default function EditProductModal({ token, product, onClose, onProductUpd
     return () => document.removeEventListener("keydown", handleEscape);
   }, [onClose]);
 
-  // ✅ Guardar cambios (PUT + POST imagen)
-  const handleSubmit = async (e) => {
+  // ✅ SUBMIT usando Redux (PUT + imagen si existe)
+  const handleSubmit = (e) => {
     e.preventDefault();
-    setLoading(true);
 
-    try {
-      // 1️⃣ Actualizar datos básicos
-      const body = {
-        name: form.name,
-        description: form.description,
-        price: parseFloat(form.price),
-        stock: parseInt(form.stock),
-        category: form.category,
-      };
-
-      const res = await fetch(`http://localhost:8080/products/${product.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: token ? `Bearer ${token}` : "",
-        },
-        body: JSON.stringify(body),
+    dispatch(
+      updateProduct({
+        form,
+        token,
+        imageFile,
+        productId: product.id,
+      })
+    )
+      .unwrap()
+      .then((updated) => {
+        alert("✅ Producto actualizado correctamente");
+        onProductUpdated(updated);
+        onClose();
+      })
+      .catch((err) => {
+        console.error("❌ Error al actualizar:", err);
+        alert("❌ No se pudo actualizar el producto");
       });
-
-      if (!res.ok) throw new Error(`Error al actualizar producto`);
-      const updated = await res.json();
-
-      // 2️⃣ Subir imagen si el usuario seleccionó una nueva
-      if (imageFile) {
-        const formData = new FormData();
-        formData.append("file", imageFile);
-
-        const imgRes = await fetch(
-          `http://localhost:8080/products/${product.id}/image`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: token ? `Bearer ${token}` : "",
-            },
-            body: formData,
-          }
-        );
-
-        if (!imgRes.ok)
-          throw new Error(`Error al subir imagen: ${imgRes.status}`);
-      }
-
-      alert("✅ Producto actualizado correctamente");
-      onProductUpdated(updated);
-      onClose();
-    } catch (err) {
-      console.error("❌ Error al actualizar producto:", err);
-      alert("❌ No se pudo actualizar el producto");
-    } finally {
-      setLoading(false);
-    }
   };
 
   return (
@@ -175,7 +144,7 @@ export default function EditProductModal({ token, product, onClose, onProductUpd
             )}
           </div>
 
-          {/* Imagen nueva */}
+          {/* Imagen */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Nueva Imagen (opcional)
