@@ -4,289 +4,163 @@ import { useSession } from "./SessionContext";
 const CartContext = createContext();
 
 export function CartProvider({ children }) {
-  const { token } = useSession();
-  const [items, setItems] = useState([]);
-  const [userId, setUserId] = useState(null);
-  const [loading, setLoading] = useState(true);
-  
-  // Estados para cupones
-  const [appliedCoupon, setAppliedCoupon] = useState(null);
-  const [lastPreview, setLastPreview] = useState(null);
-  const [loadingDiscount, setLoadingDiscount] = useState(false);
+    const { token, backendOffline } = useSession();
 
-  // Obtener carrito y userId del backend
-  const fetchCart = async () => {
-    if (!token) {
-      setItems([]);
-      setAppliedCoupon(null);
-      setLastPreview(null);
-      setLoading(false);
-      return;
-    }
+    const [items, setItems] = useState([]);
+    const [userId, setUserId] = useState(null);
+    const [loading, setLoading] = useState(true);
 
-    setLoading(true);
-    try {
-      const res = await fetch("http://localhost:8080/carts/cart", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+    const [appliedCoupon, setAppliedCoupon] = useState(null);
+    const [lastPreview, setLastPreview] = useState(null);
+    const [loadingDiscount, setLoadingDiscount] = useState(false);
 
-      if (!res.ok) throw new Error("Error al obtener carrito");
-
-      const data = await res.json();
-      setItems(data.items || []);
-      setUserId(data.userId || null);
-      localStorage.setItem("cartItems", JSON.stringify(data.items || []));
-    } catch (err) {
-      console.error("Error al obtener carrito:", err);
-      setItems([]);
-      setUserId(null);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Agregar item localmente
-  const addItem = (item) => {
-    setItems((prev) => {
-      const existingIndex = prev.findIndex(
-        (i) =>
-          i.productId === item.productId &&
-          i.selectedColor === item.selectedColor &&
-          i.selectedStorage === item.selectedStorage
-      );
-      
-      if (existingIndex !== -1) {
-        // Ya existe, incrementar cantidad
-        return prev.map((i, idx) =>
-          idx === existingIndex 
-            ? { ...i, quantity: i.quantity + item.quantity } 
-            : i
-        );
-      } else {
-        // No existe, agregar nuevo
-        return [...prev, item];
-      }
-    });
-  };
-
-  // Actualizar cantidad desde los botones (+ / -)
-  const updateQuantity = async (productId, newQuantity, action = "add") => {
-    try {
-      if (!token || !userId) return;
-
-      if (action === "add") {
-        // Agregar una unidad más usando /carts/add
-        const payload = {
-          userId,
-          item: { productId, quantity: 1 },
-        };
-
-        const res = await fetch("http://localhost:8080/carts/add", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        });
-
-        if (!res.ok) throw new Error("Error al agregar producto");
-      } else if (action === "remove") {
-        // Disminuir cantidad o eliminar si llega a 0
-        if (newQuantity <= 0) {
-          await removeItem(productId);
-          return;
+    const fetchCart = async () => {
+        if (!token) {
+            setItems([]);
+            setAppliedCoupon(null);
+            setLastPreview(null);
+            setLoading(false);
+            return;
         }
 
-        const res = await fetch(
-          `http://localhost:8080/carts/${userId}/item/${productId}/decrease`,
-          {
-            method: "PUT",
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-
-        if (!res.ok) throw new Error("Error al disminuir producto");
-      }
-
-      // 🔄 Refrescar carrito actualizado
-      await fetchCart();
-    } catch (err) {
-      console.error("Error al actualizar cantidad:", err);
-    }
-  };
-
-  // 🔹 Eliminar item completamente
-  const removeItem = async (productId) => {
-    // Optimista
-    setItems((prev) => prev.filter((it) => it.productId !== productId));
-
-    try {
-      if (!token || !userId) return;
-
-      const res = await fetch(
-        `http://localhost:8080/carts/${userId}/item/${productId}`,
-        {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
+        if (backendOffline) {
+            console.warn("⚠ Backend offline — usando carrito local");
+            setLoading(false);
+            return;
         }
-      );
 
-      if (!res.ok) throw new Error("No se pudo eliminar el producto");
-    } catch (err) {
-      console.error(err);
-    }
-  };
+        try {
+            setLoading(true);
+            const res = await fetch("http://localhost:8080/carts/cart", {
+                headers: { Authorization: `Bearer ${token}` },
+            });
 
-  // Limpiar el carrito después de la compra 
-  const clearCart = async () => {
-    // 1. Actualización optimista: vacía el carrito en la UI al instante
-    setItems([]);
-    setAppliedCoupon(null); // También limpia cualquier cupón aplicado
-    
-    try {
-      if (!token || !userId) return;
+            if (!res.ok) throw new Error("No se pudo obtener carrito");
 
-      // 2. Llama a tu endpoint del backend para vaciar el carrito
-      const res = await fetch(
-        `http://localhost:8080/carts/${userId}/clear`,
-        {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
+            const data = await res.json();
+            setItems(data.items || []);
+            setUserId(data.userId || null);
+
+            localStorage.setItem("cartItems", JSON.stringify(data.items || []));
+        } catch (err) {
+            console.error("Error obteniendo carrito:", err);
+        } finally {
+            setLoading(false);
         }
-      );
+    };
 
-      if (!res.ok) {
-        throw new Error("No se pudo vaciar el carrito en el servidor");
-      }
-      
-      console.log("Cart cleared on the server.");
+    const addItem = (item) => {
+        setItems((p) => [...p, item]);
+    };
 
-    } catch (err) {
-      console.error("Error clearing cart:", err);
-      // Opcional: si falla, podrías volver a cargar el carrito para resincronizar
-      // await fetchCart(); 
-    }
-  };
+    const updateQuantity = async (productId, newQuantity, action = "add") => {
+        if (!token || !userId || backendOffline) {
+            console.warn("⚠ Acción de carrito offline — solo local");
+            setItems((p) =>
+                p.map((i) =>
+                    i.productId === productId ? { ...i, quantity: newQuantity } : i
+                )
+            );
+            return;
+        }
 
-  // Previsualizar código de descuento
-  const previewCode = async (code) => {
-    if (!code.trim()) return;
-    
-    setLoadingDiscount(true);
-    try {
-      const res = await fetch("http://localhost:8080/cart/discounts/preview", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ code: code.trim() }),
-      });
+        try {
+            if (action === "add") {
+                await fetch("http://localhost:8080/carts/add", {
+                    method: "POST",
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        userId,
+                        item: { productId, quantity: 1 },
+                    }),
+                });
+            } else if (action === "remove") {
+                await fetch(
+                    `http://localhost:8080/carts/${userId}/item/${productId}/decrease`,
+                    {
+                        method: "PUT",
+                        headers: { Authorization: `Bearer ${token}` },
+                    }
+                );
+            }
 
-      if (!res.ok) throw new Error("Código inválido");
+            await fetchCart();
+        } catch (e) {
+            console.log("Error server — manteniendo valores locales");
+        }
+    };
 
-      const data = await res.json();
-      setLastPreview(data);
-    } catch (err) {
-      console.error("Error al previsualizar:", err);
-      setLastPreview({ code, message: "Código no válido", discountAmount: 0 });
-    } finally {
-      setLoadingDiscount(false);
-    }
-  };
+    const removeItem = async (productId) => {
+        setItems((p) => p.filter((i) => i.productId !== productId));
 
-  // Aplicar código de descuento
-  const applyCode = async (code) => {
-    if (!code.trim()) return;
-    
-    setLoadingDiscount(true);
-    try {
-      const res = await fetch("http://localhost:8080/cart/discounts/apply", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ code: code.trim() }),
-      });
+        if (backendOffline || !token || !userId) return;
 
-      if (!res.ok) throw new Error("No se pudo aplicar el cupón");
+        try {
+            await fetch(
+                `http://localhost:8080/carts/${userId}/item/${productId}`,
+                {
+                    method: "DELETE",
+                    headers: { Authorization: `Bearer ${token}` },
+                }
+            );
+        } catch {}
+    };
 
-      const data = await res.json();
-      setAppliedCoupon({ code, discountAmount: data.discountAmount || 0 });
-      setLastPreview(null);
-    } catch (err) {
-      console.error("Error al aplicar cupón:", err);
-      throw err;
-    } finally {
-      setLoadingDiscount(false);
-    }
-  };
+    const clearCart = async () => {
+        setItems([]);
 
-  // Calcular subtotal
-  const subtotal = useMemo(() => {
-    return items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  }, [items]);
+        if (!token || !userId || backendOffline) return;
 
-  // Calcular descuento
-  const discountAmount = useMemo(() => {
-    return appliedCoupon?.discountAmount || 0;
-  }, [appliedCoupon]);
+        try {
+            await fetch(`http://localhost:8080/carts/${userId}/clear`, {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${token}` },
+            });
+        } catch {}
+    };
 
-  // Calcular total
-  const total = useMemo(() => {
-    return subtotal - discountAmount;
-  }, [subtotal, discountAmount]);
+    const subtotal = useMemo(() => {
+        return items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+    }, [items]);
 
-  //  Sincronizar con localStorage
-  useEffect(() => {
-    if (items.length > 0) {
-      localStorage.setItem("cartItems", JSON.stringify(items));
-    } else {
-      localStorage.removeItem("cartItems");
-    }
-  }, [items]);
+    const discountAmount = useMemo(
+        () => appliedCoupon?.discountAmount || 0,
+        [appliedCoupon]
+    );
 
-  //  Cargar carrito al iniciar sesión
-  useEffect(() => {
-    fetchCart();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+    const total = subtotal - discountAmount;
 
-  return (
-    <CartContext.Provider
-      value={{
-        // Carrito
-        items,
-        userId,
-        loading,
-        fetchCart,
-        addItem,
-        updateQuantity,
-        removeItem,
-        clearCart,
-        
-        // Totales
-        subtotal,
-        discountAmount,
-        total,
-        
-        // Cupones
-        appliedCoupon,
-        lastPreview,
-        loadingDiscount,
-        previewCode,
-        applyCode,
-      }}
-    >
-      {children}
-    </CartContext.Provider>
-  );
+    useEffect(() => {
+        fetchCart();
+    }, [token, backendOffline]);
+
+    return (
+        <CartContext.Provider
+            value={{
+                items,
+                userId,
+                loading,
+                fetchCart,
+                addItem,
+                updateQuantity,
+                removeItem,
+                clearCart,
+                subtotal,
+                discountAmount,
+                total,
+                appliedCoupon,
+                lastPreview,
+                loadingDiscount,
+            }}
+        >
+            {children}
+        </CartContext.Provider>
+    );
 }
 
 export function useCart() {
-  const ctx = useContext(CartContext);
-  if (!ctx) throw new Error("useCart debe usarse dentro de CartProvider");
-  return ctx;
+    return useContext(CartContext);
 }
