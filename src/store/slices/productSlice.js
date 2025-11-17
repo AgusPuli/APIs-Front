@@ -161,7 +161,7 @@ export const fetchProductById = createAsyncThunk(
   "products/fetchProductById",
   async (productId, { rejectWithValue }) => {
     try {
-      const res = await fetch(`http://localhost:8080/api/products/${productId}`);
+      const res = await fetch(`http://localhost:8080/products/${productId}`);
       if (!res.ok) throw new Error(`Error HTTP ${res.status}`);
       const data = await res.json();
 
