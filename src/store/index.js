@@ -4,8 +4,10 @@ import categoryReducer from "./slices/categorySlice";
 import cartReducer from "./slices/cartSlice";
 import userReducer from "./slices/userSlice";
 import orderReducer from "./slices/orderSlice"; 
-import discountReducer from "./slices/discountSlice";
+
 import testReducer from "./slices/testSlice";
+import discountReducer from "./slices/discountSlice";
+
 
 const store = configureStore({
   reducer: {
@@ -15,7 +17,7 @@ const store = configureStore({
     cart: cartReducer,
     user: userReducer,
     order: orderReducer,
-    discount: discountReducer,
+    discounts: discountReducer
   },
 });
 

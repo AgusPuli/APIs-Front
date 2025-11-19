@@ -4,20 +4,24 @@ import ProductCard from "./ProductCard";
 import ProductFilters from "./ProductsFilters";
 import SearchBar from "../Header/SearchBar";
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import { useSelector } from "react-redux";
+
 
 export default function ProductsList({
-  products,
-  searchQuery,
-  setSearchQuery,
-  selectedCategory,
-  setSelectedCategory,
-  selectedSubcategory,
-  setSelectedSubcategory,
-  itemsPerPage = 9,
-  currentPage,
-  setCurrentPage,
-}) {
-  // Resetear página cuando cambian filtros o búsqueda
+                                         searchQuery,
+                                         setSearchQuery,
+                                         selectedCategory,
+                                         setSelectedCategory,
+                                         selectedSubcategory,
+                                         setSelectedSubcategory,
+                                         itemsPerPage = 9,
+                                         currentPage,
+                                         setCurrentPage,
+                                     }) {
+    const products = useSelector((state) => state.products.list);
+
+
+    // Resetear página cuando cambian filtros o búsqueda
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, selectedCategory, selectedSubcategory, setCurrentPage]);

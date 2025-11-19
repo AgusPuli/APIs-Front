@@ -8,6 +8,7 @@ import PaymentForm from "../components/Checkout/PaymentForm";
 import OrderReview from "../components/Checkout/OrderReview";
 import { FiLock } from "react-icons/fi";
 
+
 export default function Checkout() {
   const navigate = useNavigate();
   const { items, clearCart, subtotal, discountAmount, appliedCoupon } = useCart();
