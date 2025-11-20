@@ -22,8 +22,6 @@ export default function Header({
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const showSearch = pathname === "/products";
 
-  // Antes: const { isLoggedIn, logout } = useSession();
-  // Ahora también leemos user y loading para ocultar el carrito si es ADMIN
   const { isLoggedIn, logout, user, loading } = useSession();
 
   // Normaliza el rol para soportar "ADMIN" o "ROLE_ADMIN"

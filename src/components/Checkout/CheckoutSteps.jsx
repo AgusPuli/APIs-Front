@@ -1,5 +1,3 @@
-import React from "react";
-
 export default function CheckoutSteps({ currentStep }) {
   const steps = [
     { id: 1, label: "Datos de Envío" },

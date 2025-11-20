@@ -1,17 +1,21 @@
-// src/components/User/UserOrdersSection.jsx
 import { useEffect, useState } from "react";
-import { useSession } from "../Context/SessionContext";
+import { useSelector } from "react-redux"; // 👈 Redux en lugar de Context
 import ViewOrderModal from "./UserViewOrderModal";
 
 export default function OrdersSection() {
-  const { token, user } = useSession();
+  // 1. Obtener token y usuario desde Redux
+  const { token, user } = useSelector((state) => state.user);
+  
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [viewOrder, setViewOrder] = useState(null);
 
-  const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8080";
+  // URL fija para evitar problemas de env
+  const API_BASE = "http://localhost:8080"; 
 
-  // Mapeo de estados backend (OrderStatus) a estados UI
+  // ============================================================
+  // UTILIDADES (Mantenidas de tu código original)
+  // ============================================================
   const statusMap = {
     PAID: "Entregado",
     PENDING: "Pendiente",
@@ -28,18 +32,14 @@ export default function OrdersSection() {
       maximumFractionDigits: 2,
     }).format(Number.isFinite(n) ? n : 0);
 
-  // Convierte números en string tipo "$ 1.234,56" o "1,234.56" a Number
   const parseMoney = (v) => {
     if (v === null || v === undefined) return undefined;
     if (typeof v === "number") return Number.isFinite(v) ? v : undefined;
     let s = String(v).trim();
-    // Quitamos símbolos y espacios no numéricos
     s = s.replace(/[^\d.,-]/g, "");
-    // Caso: tiene punto y coma -> usualmente miles con punto, decimales con coma
     if (s.includes(".") && s.includes(",")) {
       s = s.replace(/\./g, "").replace(",", ".");
     } else if (s.includes(",") && !s.includes(".")) {
-      // Solo coma: tratamos coma como decimal
       s = s.replace(",", ".");
     }
     const n = Number(s);
@@ -62,32 +62,13 @@ export default function OrdersSection() {
   };
 
   const normalizeFromPayment = (p) => {
-    // id de orden
-    const id =
-      p?.orderId ??
-      p?.order?.id ??
-      p?.id ??
-      p?.paymentId ??
-      p?.transactionId ??
-      "N/A";
-
-    // método de pago
+    const id = p?.orderId ?? p?.order?.id ?? p?.id ?? p?.paymentId ?? p?.transactionId ?? "N/A";
     const method = p?.method ?? p?.paymentMethod ?? p?.payment?.method ?? "N/D";
-
-    // estado
-    const rawStatus =
-      p?.orderStatus ?? p?.status ?? p?.paymentStatus ?? "PENDING";
+    const rawStatus = p?.orderStatus ?? p?.status ?? p?.paymentStatus ?? "PENDING";
     const status = statusMap[rawStatus] ?? "Pendiente";
+    const createdAt = p?.createdAt ?? p?.paymentDate ?? p?.date ?? new Date().toISOString();
+    const items = p?.items ?? p?.orderItems ?? p?.order?.items ?? [];
 
-    // fecha
-    const createdAt =
-      p?.createdAt ?? p?.paymentDate ?? p?.date ?? new Date().toISOString();
-
-    // items si llegan anidados en el pago
-    const items =
-      p?.items ?? p?.orderItems ?? p?.order?.items ?? [];
-
-    // candidato a total directo
     const amountCandidate =
       numberish(p?.amount) ??
       numberish(p?.total) ??
@@ -98,9 +79,7 @@ export default function OrdersSection() {
       numberish(p?.price) ??
       numberish(p?.payment?.amount);
 
-    // derivado por items (si existen)
     const derivedFromItems = sumItems(items);
-
     const total = amountCandidate ?? derivedFromItems ?? 0;
 
     return {
@@ -115,6 +94,9 @@ export default function OrdersSection() {
     };
   };
 
+  // ============================================================
+  // FETCH LOGIC
+  // ============================================================
   const fetchOrders = async () => {
     if (!token) return;
 
@@ -123,15 +105,15 @@ export default function OrdersSection() {
       // 1) Traemos pagos del usuario
       const res = await fetch(`${API_BASE}/payments/my-payments`, {
         headers: { Authorization: `Bearer ${token}` },
-        credentials: "include",
       });
+      
       if (!res.ok) throw new Error("No se pudieron cargar los pagos");
       const payments = await res.json();
 
       // 2) Normalizamos cada pago
       let normalized = (payments ?? []).map(normalizeFromPayment);
 
-      // 3) Para los que sigan con total 0, buscamos la orden real
+      // 3) Buscar detalles extra si el total es 0
       const needOrderFetch = normalized.filter(
         (o) => (!o.total || o.total === 0) && o.id !== "N/A"
       );
@@ -145,35 +127,19 @@ export default function OrdersSection() {
                   Authorization: `Bearer ${token}`,
                   "Content-Type": "application/json",
                 },
-                credentials: "include",
               });
               if (!r.ok) throw new Error("No ok");
               const order = await r.json();
 
-              const orderSubtotal =
-                numberish(order?.subtotal) ??
-                sumItems(order?.items ?? order?.orderItems);
-
-              const orderDiscount =
-                numberish(order?.discountAmount) ??
-                numberish(order?.discount) ??
-                0;
-
-              const orderTotal =
-                numberish(order?.total) ??
-                (orderSubtotal !== undefined
-                  ? orderSubtotal - (orderDiscount ?? 0)
-                  : undefined);
+              const orderSubtotal = numberish(order?.subtotal) ?? sumItems(order?.items ?? order?.orderItems);
+              const orderDiscount = numberish(order?.discountAmount) ?? numberish(order?.discount) ?? 0;
+              const orderTotal = numberish(order?.total) ?? (orderSubtotal !== undefined ? orderSubtotal - (orderDiscount ?? 0) : undefined);
 
               return {
                 id: o.id,
                 total: orderTotal ?? o.total ?? 0,
                 items: order?.items ?? order?.orderItems ?? o.items ?? [],
-                method:
-                  o.method ??
-                  order?.paymentMethod ??
-                  order?.payment?.method ??
-                  "N/D",
+                method: o.method ?? order?.paymentMethod ?? order?.payment?.method ?? "N/D",
                 rawStatus: o.rawStatus ?? order?.status,
                 createdAt: o.createdAt ?? order?.createdAt ?? order?.date,
               };
@@ -187,7 +153,7 @@ export default function OrdersSection() {
           })
         );
 
-        // 4) Mergeamos detalles con la lista original
+        // 4) Mergeamos detalles
         normalized = normalized.map((o) => {
           const d = details.find((x) => x.id === o.id);
           if (!d) return o;
@@ -202,12 +168,10 @@ export default function OrdersSection() {
         });
       }
 
-      // 5) Ordenamos por fecha desc
-      normalized.sort(
-        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-      );
+      // 5) Ordenamos
+      normalized.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-      // 6) Armamos objeto final para la UI
+      // 6) Armamos objeto final UI
       const uiOrders = normalized.map((o) => ({
         id: o.id,
         total: o.total ?? 0,
@@ -233,6 +197,10 @@ export default function OrdersSection() {
     if (token) fetchOrders();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  // ============================================================
+  // RENDER
+  // ============================================================
 
   if (!user) {
     return (
@@ -261,9 +229,7 @@ export default function OrdersSection() {
         </div>
       ) : orders.length === 0 ? (
         <div className="text-center py-12">
-          <div className="text-gray-400 dark:text-gray-500 text-5xl mb-4">
-            📦
-          </div>
+          <div className="text-gray-400 dark:text-gray-500 text-5xl mb-4">📦</div>
           <p className="text-gray-500 dark:text-gray-400 text-lg font-medium">
             No tienes pedidos aún
           </p>
@@ -287,9 +253,7 @@ export default function OrdersSection() {
                   <span className="text-gray-500 dark:text-gray-400 text-sm">
                     {o.status}
                   </span>
-                  <span className="text-gray-400 dark:text-gray-500 text-xs">
-                    •
-                  </span>
+                  <span className="text-gray-400 dark:text-gray-500 text-xs">•</span>
                   <span className="text-gray-500 dark:text-gray-400 text-sm">
                     {o.method}
                   </span>

@@ -1,7 +1,9 @@
-// src/components/Cart/CartList.jsx
+import { useSelector } from "react-redux";
 import CartItem from "./CartItem";
 
-export default function CartList({ items, onQuantityChange, onDelete }) {
+export default function CartList() { 
+  const { items } = useSelector((state) => state.cart);
+
   if (!items || items.length === 0) {
     return (
       <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl">
@@ -16,12 +18,7 @@ export default function CartList({ items, onQuantityChange, onDelete }) {
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
       <div className="divide-y divide-gray-200 dark:divide-gray-700">
         {items.map((item) => (
-          <CartItem
-            key={item.productId}            
-            item={item}                      
-            onQuantityChange={onQuantityChange}
-            onDelete={onDelete}
-          />
+          <CartItem key={item.id} item={item} />
         ))}
       </div>
     </div>

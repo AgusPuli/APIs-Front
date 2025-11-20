@@ -1,92 +1,66 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useSession } from "../Context/SessionContext";
-import { useAuth } from "../Context/AuthContext"; 
-import toast from "react-hot-toast";
+import { useDispatch, useSelector } from "react-redux";
+import { loginUser } from "../../store/slices/userSlice";
 
 export default function LoginForm() {
   const navigate = useNavigate();
-  const { login } = useSession();
-  const { sharedEmail, setSharedEmail } = useAuth(); 
+  const dispatch = useDispatch();
+  const { loading, error } = useSelector((state) => state.user);
 
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      const response = await fetch("http://localhost:8080/auth/authenticate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: sharedEmail, password }), 
+  const handleSubmit = (e) => {
+    e.preventDefault(); // Evita recarga de página
+    console.log("🖱️ Click en Login detectado");
+    
+    // Despachamos la acción
+    dispatch(loginUser({ email, password }))
+      .unwrap() // Esto permite manejar el éxito/error aquí mismo
+      .then(() => {
+          console.log("✅ Redirigiendo...");
+          navigate("/");
+      })
+      .catch((err) => {
+          console.error("❌ Falló el login:", err);
+          alert("Error: " + err); // Alerta visual simple
       });
-
-      if (!response.ok) {
-        let errorMsg = "Credenciales incorrectas";
-        try {
-          const errorData = await response.json();
-          errorMsg = errorData.message || errorMsg;
-        } catch {}
-        throw new Error(errorMsg);
-      }
-
-      const data = await response.json();
-      login(data.access_token);
-      toast.success("Inicio de sesión exitoso");
-      navigate("/");
-    } catch (err) {
-      toast.error(err.message || "Error al iniciar sesión");
-    } finally {
-      setLoading(false);
-    }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-      <div className="space-y-4 rounded-md shadow-sm">
-        <div>
+    <div className="mt-8">
+      {/* Mensaje de error visual si existe */}
+      {error && <div className="bg-red-100 text-red-700 p-3 mb-4 rounded">{error}</div>}
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="space-y-4">
           <input
             type="email"
             required
-            value={sharedEmail} 
-            onChange={(e) => setSharedEmail(e.target.value)} 
-            placeholder="Correo electrónico"
-            className="form-input relative block w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-background-light dark:bg-background-dark px-3 py-3"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Email"
+            className="w-full p-3 border rounded dark:bg-gray-800 dark:text-white"
           />
-        </div>
-
-        <div>
           <input
             type="password"
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Contraseña"
-            className="form-input relative block w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-background-light dark:bg-background-dark px-3 py-3"
+            className="w-full p-3 border rounded dark:bg-gray-800 dark:text-white"
           />
         </div>
-      </div>
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="group relative flex w-full justify-center rounded-lg bg-primary py-3 text-white font-semibold"
-      >
-        {loading ? "Cargando..." : "Iniciar Sesión"}
-      </button>
-
-      <p className="text-sm text-center mt-2">
-        ¿No tienes cuenta?{" "}
         <button
-          type="button"
-          className="text-primary hover:underline"
-          onClick={() => navigate("/register")}
+          type="submit"
+          disabled={loading}
+          className="w-full py-3 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
         >
-          Registrate
+          {loading ? "Conectando..." : "Iniciar Sesión"}
         </button>
-      </p>
-    </form>
+      </form>
+    </div>
   );
 }

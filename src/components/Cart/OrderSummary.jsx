@@ -1,17 +1,16 @@
 import { FiShoppingCart } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 
-export default function OrderSummary({ 
-  subtotal, 
-  discountAmount = 0,
-  discountLabel = "Cupón",
-  isDisabled = false 
-}) {
+export default function OrderSummary() {
   const navigate = useNavigate();
+  
+  const { total, discount, discountCode } = useSelector((state) => state.cart);
 
-  const shipping = 0; // Envío gratuito
-  const subtotalAfterDiscount = subtotal - discountAmount;
-  const total = subtotalAfterDiscount + shipping ;
+  const subtotal = total;
+  const shipping = 0; 
+  const finalTotal = Math.max(0, subtotal - discount + shipping);
+  const isDisabled = subtotal === 0;
 
   const handleCheckout = () => {
     if (!isDisabled) {
@@ -32,11 +31,11 @@ export default function OrderSummary({
           <p className="font-semibold">${subtotal.toFixed(2)}</p>
         </div>
 
-        {/* Descuento (si existe) */}
-        {discountAmount > 0 && (
+        {/* Descuento */}
+        {discount > 0 && (
           <div className="flex justify-between text-green-600 dark:text-green-400">
-            <p>{discountLabel}</p>
-            <p className="font-semibold">-${discountAmount.toFixed(2)}</p>
+            <p>Cupón {discountCode ? `(${discountCode})` : ""}</p>
+            <p className="font-semibold">-${discount.toFixed(2)}</p>
           </div>
         )}
 
@@ -54,7 +53,7 @@ export default function OrderSummary({
         <div className="flex justify-between items-center">
           <p className="text-lg font-bold text-gray-900 dark:text-white">Total</p>
           <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-            ${total.toFixed(2)}
+            ${finalTotal.toFixed(2)}
           </p>
         </div>
       </div>
@@ -76,7 +75,7 @@ export default function OrderSummary({
       {/* Info adicional */}
       <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
         <p className="text-xs text-blue-800 dark:text-blue-300 text-center">
-          🔒 Pago seguro • 🚚 Envío gratis en compras mayores a $50.000
+          Pago seguro • Envio gratis en compras mayores a $50.000
         </p>
       </div>
     </div>

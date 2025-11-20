@@ -5,38 +5,38 @@ import ProductTable from "./ProductTable";
 import CreateProductModal from "./ProductModal/ProductCreateModal";
 import EditProductModal from "./ProductModal/EditProductModal";
 import ToggleActiveModal from "./ProductModal/ToggleActiveModal";
-import { useSession } from "../../Context/SessionContext";
 import { FiPlus } from "react-icons/fi";
+import toast from "react-hot-toast"; // Usamos toast en lugar de alert para mejor UX
 
 export default function ProductSection() {
-  const { token } = useSession();
   const dispatch = useDispatch();
 
   // Redux state
   const { list: products, loading, error } = useSelector((state) => state.products);
 
-  // Modals (local UI only)
+  // Modals
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editProduct, setEditProduct] = useState(null);
   const [toggleTarget, setToggleTarget] = useState(null);
 
-  // Cargar productos al iniciar
+  // Cargar productos al iniciar (Ya no pasamos token, el Thunk lo busca solo)
   useEffect(() => {
-    if (token) dispatch(fetchProducts(token));
-  }, [token, dispatch]);
+    dispatch(fetchProducts());
+  }, [dispatch]);
 
-  // Callback para creación
+  // Callback para creación exitosa
   const handleProductCreated = () => {
     setShowCreateModal(false);
-    dispatch(fetchProducts(token));
-    alert("Producto creado exitosamente");
+    // Recargamos la lista para ver el nuevo producto
+    dispatch(fetchProducts());
+    toast.success("Producto creado exitosamente");
   };
 
   // Callback para actualización
   const handleProductUpdated = () => {
     setEditProduct(null);
-    dispatch(fetchProducts(token));
-    alert("Producto actualizado exitosamente");
+    dispatch(fetchProducts());
+    toast.success("Producto actualizado exitosamente");
   };
 
   // Abrir modal de activar/desactivar
@@ -44,27 +44,27 @@ export default function ProductSection() {
     setToggleTarget({ product, nextActive });
   };
 
-  // Confirmar toggle usando Redux
+  // Confirmar toggle
   const handleConfirmToggle = () => {
     if (!toggleTarget) return;
 
     const { product, nextActive } = toggleTarget;
 
-    dispatch(
-      toggleProductActive({
+    // Ya no pasamos token
+    dispatch(toggleProductActive({
         productId: product.id,
-        active: nextActive,
-        token: token,
-      })
-    )
+        active: nextActive
+    }))
       .unwrap()
       .then(() => {
         setToggleTarget(null);
-        alert(nextActive ? "Producto habilitado" : "Producto deshabilitado");
+        toast.success(nextActive ? "Producto habilitado" : "Producto deshabilitado");
+        // Actualizamos la lista para reflejar cambios visuales si es necesario
+        dispatch(fetchProducts());
       })
       .catch((err) => {
         console.error("Error toggle:", err);
-        alert("No se pudo cambiar el estado");
+        toast.error("No se pudo cambiar el estado");
       });
   };
 
@@ -77,7 +77,7 @@ export default function ProductSection() {
           <p className="text-gray-600 dark:text-gray-400 mt-1">Gestiona los productos del catálogo</p>
         </div>
         <button
-          className="btn-primary flex items-center gap-2"
+          className="btn-primary flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           onClick={() => setShowCreateModal(true)}
         >
           <FiPlus className="w-5 h-5" /> Agregar Producto
@@ -87,11 +87,14 @@ export default function ProductSection() {
       {/* Contenido */}
       {loading ? (
         <div className="text-center py-12">
-          <div className="spinner mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600 dark:text-gray-400">Cargando productos...</p>
         </div>
       ) : error ? (
-        <div className="text-center text-red-500">{error}</div>
+        <div className="text-center text-red-500 py-10">
+            <p>Error: {typeof error === 'object' ? JSON.stringify(error) : error}</p>
+            <button onClick={() => dispatch(fetchProducts())} className="mt-4 text-blue-600 underline">Reintentar</button>
+        </div>
       ) : (
         <ProductTable
           products={products}
@@ -100,10 +103,9 @@ export default function ProductSection() {
         />
       )}
 
-      {/* Modales */}
+      {/* Modales sin token */}
       {showCreateModal && (
         <CreateProductModal
-          token={token}
           onClose={() => setShowCreateModal(false)}
           onProductCreated={handleProductCreated}
         />
@@ -111,7 +113,6 @@ export default function ProductSection() {
 
       {editProduct && (
         <EditProductModal
-          token={token}
           product={editProduct}
           onClose={() => setEditProduct(null)}
           onProductUpdated={handleProductUpdated}
@@ -124,7 +125,7 @@ export default function ProductSection() {
           targetActive={toggleTarget.nextActive}
           onClose={() => setToggleTarget(null)}
           onConfirm={handleConfirmToggle}
-          loading={loading} // usa loading global
+          loading={loading}
         />
       )}
     </div>

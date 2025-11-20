@@ -1,23 +1,29 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useCart } from "../components/Context/CartContext";
-import { useSession } from "../components/Context/SessionContext";
+import { useSelector, useDispatch } from "react-redux";
+import { createOrder, resetOrderState } from "../store/slices/orderSlice";
+import { clearCart } from "../store/slices/cartSlice";
+import toast from "react-hot-toast";
+
+// Importamos tus componentes visuales desde la carpeta components
 import CheckoutSteps from "../components/Checkout/CheckoutSteps";
 import ShippingForm from "../components/Checkout/ShippingForm";
 import PaymentForm from "../components/Checkout/PaymentForm";
 import OrderReview from "../components/Checkout/OrderReview";
-import { FiLock } from "react-icons/fi";
-
 
 export default function Checkout() {
   const navigate = useNavigate();
-  const { items, clearCart, subtotal, discountAmount, appliedCoupon } = useCart();
-  const { token, user } = useSession();
+  const dispatch = useDispatch();
 
-  const [currentStep, setCurrentStep] = useState(1);
-  const [loading, setLoading] = useState(false);
+  // 1. Redux: Datos del carrito, usuario y estado de la orden
+  const { items, total, discount, discountCode } = useSelector((state) => state.cart);
+  const { token, authenticated, user } = useSelector((state) => state.user);
+  const { loading: orderLoading, success: orderSuccess, error: orderError } = useSelector((state) => state.order);
 
-  // Datos de envío
+  // 2. Estados locales para los formularios
+  const [step, setStep] = useState(1);
+  
+  // Datos de envío (Pre-llenados con datos del usuario si existen)
   const [shippingData, setShippingData] = useState({
     fullName: user ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : "",
     email: user?.email || "",
@@ -29,208 +35,138 @@ export default function Checkout() {
     country: "Argentina",
   });
 
-  // Datos de pago (solo para UI; backend espera un PaymentRequest separado)
+  // Datos de pago
   const [paymentData, setPaymentData] = useState({
     cardNumber: "",
     cardHolder: "",
     expiryDate: "",
     cvv: "",
+    saveCard: false,
   });
 
-  // Totales
-  const total = subtotal - discountAmount;
-
-  // Enviar orden y luego registrar el pago
-  const handlePlaceOrder = async () => {
-      setLoading(true);
-    try {
-      // 1) Crear la orden (endpoint que ya tenés)
-      // Nota: tu backend usa el carrito del usuario, por eso hacemos POST sin body normalmente.
-      // Si tu OrdersController acepta body, se puede enviar, pero aquí mantenemos el POST "normal".
-      const res = await fetch("http://localhost:8080/orders/checkout", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        // Si tu backend no acepta body para checkout, podés remover body.
-        // body: JSON.stringify({ /* opcional */ }),
-      });
-
-      if (!res.ok) {
-        const errText = await res.text();
-        console.error("❌ Error al crear orden:", errText);
-        throw new Error("Error al crear la orden");
-      }
-
-      const order = await res.json();
-      console.log("✅ Orden creada:", order);
-
-      // 2) Registrar el pago en /payments (PAYMENT REQUEST)
-      // Aquí mandamos siempre el mismo DTO para pruebas:
-      const paymentPayload = {
-        orderId: order.id,
-        amount: order.total ?? total, // usa el total que venga del backend o el calculado en front
-        method: "CREDIT_CARD",
-        status: "COMPLETED",
-      };
-
-      // ---------- AQUI se llama al endpoint /payments ----------
-      // Endpoint: POST http://localhost:8080/payments
-      // Body JSON enviado: paymentPayload (ver arriba)
-      const payRes = await fetch("http://localhost:8080/payments", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(paymentPayload),
-      });
-      // --------------------------------------------------------
-
-      if (!payRes.ok) {
-        const errText = await payRes.text();
-        console.error("❌ Error al registrar pago:", errText);
-        // no abortamos limpieza/redirección automáticamente: lanzamos error para avisar al usuario
-        throw new Error("Error al registrar el pago");
-      }
-
-      const payment = await payRes.json();
-      console.log("💳 Pago procesado:", payment);
-
-      // 3) Limpiar carrito y redirigir a detalle de orden
-      if (typeof clearCart === "function") {
-        await clearCart();
-        
-      } else {
-        console.warn("clearCart no está disponible en useCart()");
-      }
-
-      navigate(`/orders/${order.id}`);
-
-    } catch (err) {
-      console.error("❌ Error general en checkout/pago:", err);
-      alert("No se pudo completar el pedido. Intenta nuevamente.");
-    } finally {
-      setLoading(false);
+  // 3. Validaciones al montar: Si no hay items o usuario, fuera.
+  useEffect(() => {
+    if (items.length === 0 && !orderSuccess) {
+      toast("El carrito está vacío");
+      navigate("/cart");
     }
+    if (!authenticated) {
+      toast("Debes iniciar sesión para comprar");
+      navigate("/login");
+    }
+  }, [items, authenticated, navigate, orderSuccess]);
+
+  // 4. Efecto al completarse la orden exitosamente
+  useEffect(() => {
+    if (orderSuccess) {
+      toast.success("¡Orden creada con éxito!");
+      dispatch(clearCart()); 
+      dispatch(resetOrderState()); 
+      navigate("/user"); // Redirigir a "Mis Pedidos"
+    }
+  }, [orderSuccess, dispatch, navigate]);
+
+  // 5. Efecto para errores de orden
+  useEffect(() => {
+    if (orderError) {
+      toast.error(`Error al procesar: ${orderError}`);
+    }
+  }, [orderError]);
+
+  // Navegación entre pasos
+  const nextStep = () => setStep((prev) => prev + 1);
+  const prevStep = () => setStep((prev) => prev - 1);
+
+// 6. Lógica Final: Confirmar Compra
+  const handleConfirmOrder = () => {
+    if (!token) {
+        toast.error("Debes iniciar sesión");
+        return;
+    }
+
+    // Solo mandamos datos del pago. La orden se crea sola desde el carrito.
+    const paymentPayload = {
+        paymentMethod: "CREDIT_CARD"
+    };
+
+    dispatch(createOrder({ paymentData: paymentPayload }));
   };
 
-  // Validaciones por paso
-  const handleNextStep = () => {
-    if (currentStep === 1 && !shippingData.fullName) {
-      alert("Completá tus datos de envío.");
-      return;
-    }
-    if (currentStep === 2 && !paymentData.cardNumber) {
-      alert("Completá los datos de pago.");
-      return;
-    }
-    setCurrentStep((prev) => prev + 1);
-  };
-
-  const handlePrevStep = () => setCurrentStep((prev) => prev - 1);
-
-  // UI
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto">
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-2">
-              Finalizar Compra
-            </h1>
-            <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-              <FiLock size={16} />
-              <span className="text-sm">Pago seguro y encriptado</span>
-            </div>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-10 px-4">
+      <div className="max-w-6xl mx-auto">
+        
+        {/* Barra de progreso */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Finalizar Compra</h1>
+          <CheckoutSteps currentStep={step} />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          {/* Columna Izquierda: Formularios Dinámicos */}
+          <div className="lg:col-span-2">
+            {step === 1 && (
+              <ShippingForm
+                data={shippingData}
+                setData={setShippingData}
+                onNext={nextStep}
+              />
+            )}
+            {step === 2 && (
+              <PaymentForm
+                data={paymentData}
+                setData={setPaymentData}
+                onNext={nextStep}
+                onPrev={prevStep}
+              />
+            )}
+            {step === 3 && (
+              <OrderReview
+                shippingData={shippingData}
+                paymentData={paymentData}
+                onPrev={prevStep}
+                onConfirm={handleConfirmOrder}
+                loading={orderLoading}
+              />
+            )}
           </div>
 
-          <CheckoutSteps currentStep={currentStep} />
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
-            {/* Formularios */}
-            <div className="lg:col-span-2">
-              {currentStep === 1 && (
-                <ShippingForm
-                  data={shippingData}
-                  setData={setShippingData}
-                  onNext={handleNextStep}
-                />
-              )}
-
-              {currentStep === 2 && (
-                <PaymentForm
-                  data={paymentData}
-                  setData={setPaymentData}
-                  onNext={handleNextStep}
-                  onPrev={handlePrevStep}
-                />
-              )}
-
-              {currentStep === 3 && (
-                <OrderReview
-                  shippingData={shippingData}
-                  paymentData={paymentData}
-                  onPrev={handlePrevStep}
-                  onConfirm={handlePlaceOrder}
-                  loading={loading}
-                />
-              )}
-            </div>
-
-            {/* Resumen */}
-            <div className="lg:col-span-1">
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 sticky top-24">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                  Resumen del Pedido
-                </h2>
-
-                <div className="space-y-3 mb-4 max-h-60 overflow-y-auto">
-                  {items.map((item) => (
-                    <div key={item.productId} className="flex gap-3">
-                      <img
-                        src={item.imageUrl}
-                        alt={item.name}
-                        className="w-16 h-16 object-cover rounded-lg"
-                      />
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900 dark:text-white">
-                          {item.name}
-                        </p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          Cant: {item.quantity}
-                        </p>
-                        <p className="font-semibold text-gray-900 dark:text-white">
-                          ${(item.price * item.quantity).toFixed(2)}
-                        </p>
+          {/* Columna Derecha: Resumen del Carrito */}
+          <div className="hidden lg:block">
+             <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm sticky top-24 border border-gray-200 dark:border-gray-700">
+                <h3 className="font-bold text-gray-900 dark:text-white mb-4 text-lg">Resumen del Pedido</h3>
+                <div className="space-y-3 mb-4 max-h-60 overflow-y-auto custom-scrollbar">
+                  {items.map(item => (
+                      <div key={item.id} className="flex justify-between text-sm text-gray-600 dark:text-gray-300">
+                          <div className="flex gap-2">
+                             <span className="font-medium text-gray-900 dark:text-white">x{item.quantity}</span>
+                             <span className="truncate max-w-[150px]" title={item.name}>{item.name}</span>
+                          </div>
+                          <span>${(item.price * item.quantity).toFixed(2)}</span>
                       </div>
-                    </div>
                   ))}
                 </div>
-
+                
                 <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-2">
-                  <div className="flex justify-between text-gray-700 dark:text-gray-300">
-                    <span>Subtotal</span>
-                    <span>${subtotal.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between text-gray-700 dark:text-gray-300">
-                    <span>
-                      {appliedCoupon?.code ? `Descuento (${appliedCoupon.code})` : "Descuento"}
-                    </span>
-                    <span>-${discountAmount.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between text-gray-700 dark:text-gray-300">
-                    <span>Total</span>
-                    <span className="font-bold text-blue-600 dark:text-blue-400">
-                      ${total.toFixed(2)}
-                    </span>
-                  </div>
+                    <div className="flex justify-between text-gray-600 dark:text-gray-400">
+                        <span>Subtotal</span>
+                        <span>${total.toFixed(2)}</span>
+                    </div>
+                    {discount > 0 && (
+                        <div className="flex justify-between text-green-600 dark:text-green-400">
+                            <span>Descuento</span>
+                            <span>-${discount.toFixed(2)}</span>
+                        </div>
+                    )}
+                    <div className="flex justify-between font-bold text-lg text-gray-900 dark:text-white pt-2">
+                        <span>Total</span>
+                        <span>${(total - discount).toFixed(2)}</span>
+                    </div>
                 </div>
-              </div>
-            </div>
+             </div>
           </div>
+
         </div>
       </div>
     </div>

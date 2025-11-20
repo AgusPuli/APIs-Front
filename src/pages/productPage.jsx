@@ -14,18 +14,20 @@ export default function ProductPage() {
     const { productId } = useParams();
     const dispatch = useDispatch();
 
-    // 🔹 Redux
+    // Redux: Obtener producto y usuario
     const { selected: product, loadingSelected, error } = useSelector(
         (state) => state.products
     );
+    const { user } = useSelector((state) => state.user);
 
-    // 🔹 Imagen local
+    // Verificar si es administrador
+    const isAdmin = user?.role === "ADMIN";
+
+    // Estados locales
     const [imageUrl, setImageUrl] = useState("/placeholder.jpg");
-
-    // 🔹 Especificaciones (como en el viejo)
     const [specs, setSpecs] = useState(null);
 
-    // 🔹 Reseñas mock (como en el viejo)
+    // Mock de resenas (se mantiene igual que tu original)
     const reviewsMock = [
         {
             user: "Juan",
@@ -34,33 +36,35 @@ export default function ProductPage() {
             date: "2025-10-18",
         },
         {
-            user: "María",
+            user: "Maria",
             rating: 4,
             comment: "Muy bueno, lo recomiendo.",
             date: "2025-10-17",
         },
     ];
 
-    // 🧠 Traer producto desde Redux
+    // 1. Cargar producto desde Redux
     useEffect(() => {
         if (productId) {
             dispatch(fetchProductById(productId));
         }
     }, [productId, dispatch]);
 
-    // 🧠 Crear especificaciones cuando llega el producto
+    // 2. Generar especificaciones cuando llega el producto
     useEffect(() => {
         if (!product) return;
 
         setSpecs({
             Precio: `$${product.price?.toLocaleString("es-AR")}`,
             Stock: product.stock ?? 0,
-            Categoría: product.category?.name || "Sin categoría",
+            Categoria: product.category?.name || product.category || "Sin categoria",
         });
     }, [product]);
 
-    // 🧠 Cargar imagen RAW
+    // 3. Cargar imagen (Logica original con fetch para obtener blob)
+    // Nota: Podrias usar URL directa como en ProductCard, pero mantengo tu logica aqui
     useEffect(() => {
+        let isMounted = true;
         async function fetchImage() {
             try {
                 const res = await fetch(
@@ -70,75 +74,94 @@ export default function ProductPage() {
                 if (!res.ok) throw new Error("No image");
 
                 const blob = await res.blob();
-                setImageUrl(URL.createObjectURL(blob));
+                if (isMounted) {
+                    setImageUrl(URL.createObjectURL(blob));
+                }
             } catch {
-                setImageUrl("/placeholder.jpg");
+                if (isMounted) {
+                    setImageUrl("/placeholder.jpg");
+                }
             }
         }
 
         if (productId) fetchImage();
+
+        return () => {
+            isMounted = false;
+        };
     }, [productId]);
 
-    // LOADING
+    // Estado de carga
     if (loadingSelected) {
         return (
-            <p className="text-center py-20 text-gray-500">
-                Cargando producto...
-            </p>
+            <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+                <p className="text-gray-600 dark:text-gray-400">Cargando producto...</p>
+            </div>
         );
     }
 
-    // ERROR
+    // Estado de error
     if (error || !product) {
         return (
-            <p className="text-center py-20 text-red-500">
-                Producto no encontrado.
-            </p>
+            <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+                <p className="text-red-500">Producto no encontrado.</p>
+            </div>
         );
     }
 
     return (
-        <div className="bg-gray-50 dark:bg-gray-900 min-h-screen">
+        <div className="bg-gray-50 dark:bg-gray-900 min-h-screen flex flex-col">
+            {/* Header opcional si no esta en App.jsx */}
+            {/* <Header /> */}
 
-            {/* Banner inactivo */}
-            {!product.active && (
-                <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-                    <div className="rounded-lg bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 p-3 text-yellow-800 dark:text-yellow-200">
-                        Este producto no está disponible actualmente.
+            {/* Banner para Administradores */}
+            {isAdmin && (
+                <div className="bg-gray-800 text-white text-center py-3 px-4 text-sm font-medium">
+                    Modo Administrador: La compra esta deshabilitada para tu cuenta.
+                </div>
+            )}
+
+            {/* Banner para producto inactivo */}
+            {!product.active && !isAdmin && (
+                <div className="container mx-auto px-4 pt-6">
+                    <div className="bg-yellow-100 text-yellow-800 p-3 rounded-lg border border-yellow-200 text-center">
+                        Este producto no esta disponible actualmente.
                     </div>
                 </div>
             )}
 
-            <section className="py-16 sm:py-20">
+            <section className="flex-grow py-12 sm:py-16">
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8 lg:flex lg:gap-12">
 
-                    {/* Imagen */}
+                    {/* Columna Izquierda: Imagen */}
                     <div className="lg:w-1/2 mb-8 lg:mb-0">
-                        <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md border border-gray-200 dark:border-gray-700">
+                        <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
                             <img
                                 src={imageUrl}
                                 alt={product.name}
-                                className="w-full h-auto rounded-lg object-cover"
+                                className="w-full h-auto rounded-lg object-cover aspect-square"
                                 onError={(e) => (e.target.src = "/placeholder.jpg")}
                             />
                         </div>
                     </div>
 
-                    {/* Info */}
+                    {/* Columna Derecha: Informacion */}
                     <div className="lg:w-1/2 flex flex-col gap-6">
 
+                        {/* Info Principal */}
                         <ProductInfo
                             product={product}
-                            canBuy={product.active === true}
+                            // Logica: Puede comprar si esta activo Y NO es admin
+                            canBuy={product.active === true && !isAdmin}
                         />
 
-                        {/* 🔹 ESPECIFICACIONES (como antes) */}
-                        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
+                        {/* Especificaciones */}
+                        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
                             <ProductSpecs product={{ specifications: specs }} />
                         </div>
 
-                        {/* 🔹 RESEÑAS MOCK (como antes) */}
-                        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
+                        {/* Resenas */}
+                        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
                             <ProductReviews
                                 product={{
                                     reviews: reviewsMock,

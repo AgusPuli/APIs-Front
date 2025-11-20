@@ -1,9 +1,10 @@
 import { Link } from "react-router-dom";
 import { FiShoppingCart } from "react-icons/fi";
-import { useCart } from "../Context/CartContext.jsx";
+import { useSelector } from "react-redux"; 
 
 export default function CartButton() {
-  const { items } = useCart();
+  // Lee el carrito desde el Store global
+  const { items } = useSelector((state) => state.cart);
 
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
   const displayCount = itemCount > 10 ? "10+" : itemCount;

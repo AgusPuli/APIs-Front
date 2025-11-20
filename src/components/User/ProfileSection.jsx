@@ -1,7 +1,8 @@
-import { useSession } from "../Context/SessionContext";
+import { useSelector } from "react-redux"; // 👈 Redux
 
 export default function ProfileSection() {
-  const { user, loading } = useSession();
+  // Leer estado global
+  const { user, loading } = useSelector((state) => state.user);
 
   if (loading) {
     return (

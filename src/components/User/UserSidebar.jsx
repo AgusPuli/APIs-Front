@@ -1,8 +1,6 @@
-// src/components/User/Sidebar.jsx
 import { useState } from "react";
 import { FiUser, FiShoppingCart, FiMenu, FiX } from "react-icons/fi";
 
-// Icono Home igual al del sidebar de Admin
 const HomeIcon = ({ size = 20, className = "" }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -25,7 +23,7 @@ export default function Sidebar({ currentSection, setSection }) {
   const [isOpen, setIsOpen] = useState(false);
 
   const menuItems = [
-    { id: "inicio", label: "Inicio", icon: HomeIcon }, // nuevo
+    { id: "inicio", label: "Inicio", icon: HomeIcon }, 
     { id: "orders", label: "Mis Pedidos", icon: FiShoppingCart },
     { id: "profile", label: "Mi Perfil", icon: FiUser },
   ];

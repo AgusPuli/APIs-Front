@@ -1,32 +1,56 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 
-//
-// ────────────────────────────────────────────────
-//    THUNKS (arriba SIEMPRE)
-// ────────────────────────────────────────────────
-//
+const API_URL = "http://localhost:8080";
 
-// 🧠 Obtener todos los productos
+// 🛠️ Helper para obtener headers con Token automáticamente
+const getAuthHeaders = (getState) => {
+  const state = getState();
+  const token = state.user?.token || localStorage.getItem("token");
+  return {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  };
+};
+
+// 🛠️ Helper para headers de imagen (sin Content-Type json)
+const getImageHeaders = (getState) => {
+  const state = getState();
+  const token = state.user?.token || localStorage.getItem("token");
+  return { Authorization: `Bearer ${token}` };
+};
+
+// ============================================================
+// THUNKS
+// ============================================================
+
+// 🧠 1. FETCH ALL
 export const fetchProducts = createAsyncThunk(
   "products/fetchProducts",
-  async (token, { rejectWithValue }) => {
+  async (_, { rejectWithValue, getState }) => {
     try {
-      const res = await fetch("http://localhost:8080/products", {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      const headers = getAuthHeaders(getState);
+      // Quitamos Content-Type para GET, pero mantenemos Auth
+      const res = await fetch(`${API_URL}/products`, { 
+          headers: { Authorization: headers.Authorization } 
       });
+      
       if (!res.ok) throw new Error(`Error HTTP ${res.status}`);
-
       const data = await res.json();
-      const array = Array.isArray(data) ? data : data.content || [];
+      
+      let array = [];
+      if (Array.isArray(data)) array = data;
+      else if (data.content) array = data.content;
+      else if (data.products) array = data.products;
 
-      // normalización
       return array.map((p) => ({
         ...p,
-        category:
-          typeof p.category === "object"
-            ? p.category?.name || "Sin categoría"
-            : p.category || "Sin categoría",
-        active: typeof p.active === "boolean" ? p.active : true,
+        id: p.id,
+        name: p.name || "",
+        description: p.description || "",
+        price: typeof p.price === "number" ? p.price : 0,
+        stock: typeof p.stock === "number" ? p.stock : 0,
+        category: p.category?.name || (typeof p.category === "string" ? p.category : "Sin categoría"),
+        active: p.active !== undefined ? p.active : true,
       }));
     } catch (err) {
       return rejectWithValue(err.message);
@@ -34,67 +58,64 @@ export const fetchProducts = createAsyncThunk(
   }
 );
 
-// 🧱 Crear producto
+// 🧠 2. CREATE PRODUCT (Ahora lee el token solo)
 export const createProduct = createAsyncThunk(
   "products/createProduct",
-  async ({ form, token, imageFile }, { rejectWithValue }) => {
+  async ({ form, imageFile }, { rejectWithValue, getState }) => {
     try {
-      const res = await fetch("http://localhost:8080/products", {
+      console.log("📤 Creando producto...", form);
+
+      const res = await fetch(`${API_URL}/products`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers: getAuthHeaders(getState), // 👈 Token automático
         body: JSON.stringify({
           name: form.name,
           description: form.description,
           price: parseFloat(form.price),
           stock: parseInt(form.stock),
-          category: form.category,
+          category: form.category, // Asegúrate que tu backend acepte String ("ELECTRONICS") o Enum
         }),
       });
 
-      if (!res.ok) throw new Error(`Error HTTP ${res.status}`);
+      if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || `Error ${res.status}`);
+      }
+      
       const created = await res.json();
+      console.log("✅ Producto creado, ID:", created.id);
 
-      // Subir imagen
+      // Subir imagen si existe
       if (imageFile) {
+        console.log("📤 Subiendo imagen...");
         const formData = new FormData();
         formData.append("file", imageFile);
-        formData.append("name", form.name);
-
-        const imgRes = await fetch(
-          `http://localhost:8080/products/${created.id}/image`,
-          {
+        
+        const imgRes = await fetch(`${API_URL}/products/${created.id}/image`, {
             method: "POST",
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
+            headers: getImageHeaders(getState), // 👈 Token automático
             body: formData,
-          }
-        );
-
-        if (!imgRes.ok) {
-          throw new Error(`Error subiendo imagen: ${imgRes.status}`);
-        }
+        });
+        
+        if(!imgRes.ok) console.warn("⚠ La imagen no se pudo subir");
       }
 
       return created;
     } catch (err) {
+      console.error("❌ Error createProduct:", err);
       return rejectWithValue(err.message);
     }
   }
 );
 
-// 🧩 Actualizar producto
+// 🧠 3. UPDATE PRODUCT
 export const updateProduct = createAsyncThunk(
   "products/updateProduct",
-  async ({ form, token, imageFile, productId }, { rejectWithValue }) => {
+  async ({ form, imageFile, productId }, { rejectWithValue, getState }) => {
     try {
-      const res = await fetch(`http://localhost:8080/products/${productId}`, {
+      const res = await fetch(`${API_URL}/products/${productId}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers: getAuthHeaders(getState), // 👈 Token automático
         body: JSON.stringify({
           name: form.name,
           description: form.description,
@@ -107,21 +128,14 @@ export const updateProduct = createAsyncThunk(
       if (!res.ok) throw new Error(`Error HTTP ${res.status}`);
       const updated = await res.json();
 
-      // Imagen nueva
       if (imageFile) {
         const formData = new FormData();
         formData.append("file", imageFile);
-
-        const imgRes = await fetch(
-          `http://localhost:8080/products/${productId}/image`,
-          {
+        await fetch(`${API_URL}/products/${productId}/image`, {
             method: "POST",
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
+            headers: getImageHeaders(getState),
             body: formData,
-          }
-        );
-
-        if (!imgRes.ok) throw new Error(`Error subiendo imagen`);
+        });
       }
 
       return updated;
@@ -131,24 +145,20 @@ export const updateProduct = createAsyncThunk(
   }
 );
 
-// 🟧 Activar / desactivar producto
+// 🧠 4. TOGGLE ACTIVE
 export const toggleProductActive = createAsyncThunk(
   "products/toggleProductActive",
-  async ({ productId, active, token }, { rejectWithValue }) => {
+  async ({ productId, active }, { rejectWithValue, getState }) => {
     try {
       const res = await fetch(
-        `http://localhost:8080/products/${productId}/active?active=${active}`,
+        `${API_URL}/products/${productId}/active?active=${active}`,
         {
           method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
+          headers: getAuthHeaders(getState), // 👈 Token automático
         }
       );
 
       if (!res.ok) throw new Error(`Error HTTP ${res.status}`);
-
       return await res.json();
     } catch (err) {
       return rejectWithValue(err.message);
@@ -156,34 +166,41 @@ export const toggleProductActive = createAsyncThunk(
   }
 );
 
-// 🧠 Obtener producto por ID
+// 🧠 5. DELETE PRODUCT (Si lo necesitas)
+export const deleteProduct = createAsyncThunk(
+    "products/deleteProduct",
+    async (productId, { rejectWithValue, getState }) => {
+        try {
+            const res = await fetch(`${API_URL}/products/${productId}`, {
+                method: "DELETE",
+                headers: getAuthHeaders(getState),
+            });
+            if (!res.ok) throw new Error(`Error HTTP ${res.status}`);
+            return productId;
+        } catch (err) {
+            return rejectWithValue(err.message);
+        }
+    }
+);
+
+// 🧠 6. FETCH BY ID
 export const fetchProductById = createAsyncThunk(
   "products/fetchProductById",
   async (productId, { rejectWithValue }) => {
     try {
-      const res = await fetch(`http://localhost:8080/products/${productId}`);
+      const res = await fetch(`${API_URL}/products/${productId}`);
       if (!res.ok) throw new Error(`Error HTTP ${res.status}`);
       const data = await res.json();
-
-      return {
-        ...data,
-        images: Array.isArray(data.images)
-          ? data.images
-          : data.images
-          ? [data.images]
-          : [],
-      };
+      return { ...data, images: Array.isArray(data.images) ? data.images : [] };
     } catch (err) {
       return rejectWithValue(err.message);
     }
   }
 );
 
-//
-// ────────────────────────────────────────────────
-//    SLICE
-// ────────────────────────────────────────────────
-//
+// ============================================================
+// SLICE
+// ============================================================
 
 const productSlice = createSlice({
   name: "products",
@@ -202,12 +219,8 @@ const productSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      //
-      // FETCH LISTA
-      //
-      .addCase(fetchProducts.pending, (state) => {
-        state.loading = true;
-      })
+      // FETCH ALL
+      .addCase(fetchProducts.pending, (state) => { state.loading = true; })
       .addCase(fetchProducts.fulfilled, (state, action) => {
         state.loading = false;
         state.list = action.payload;
@@ -216,13 +229,8 @@ const productSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-
-      //
       // CREATE
-      //
-      .addCase(createProduct.pending, (state) => {
-        state.loading = true;
-      })
+      .addCase(createProduct.pending, (state) => { state.loading = true; })
       .addCase(createProduct.fulfilled, (state, action) => {
         state.loading = false;
         state.list.push(action.payload);
@@ -231,54 +239,28 @@ const productSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-
-      //
-      // UPDATE
-      //
-      .addCase(updateProduct.pending, (state) => {
-        state.loading = true;
-      })
+      // UPDATE & TOGGLE
       .addCase(updateProduct.fulfilled, (state, action) => {
-        state.loading = false;
-        const index = state.list.findIndex((p) => p.id === action.payload.id);
-        if (index !== -1) state.list[index] = action.payload;
-      })
-      .addCase(updateProduct.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
-      })
-
-      //
-      // TOGGLE ACTIVE
-      //
-      .addCase(toggleProductActive.pending, (state) => {
-        state.loading = true;
+          state.loading = false;
+          const idx = state.list.findIndex(p => p.id === action.payload.id);
+          if(idx !== -1) state.list[idx] = action.payload;
       })
       .addCase(toggleProductActive.fulfilled, (state, action) => {
-        state.loading = false;
-        const index = state.list.findIndex((p) => p.id === action.payload.id);
-        if (index !== -1) state.list[index] = action.payload;
+          const idx = state.list.findIndex(p => p.id === action.payload.id);
+          if(idx !== -1) state.list[idx] = action.payload;
       })
-      .addCase(toggleProductActive.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
+      // DELETE
+      .addCase(deleteProduct.fulfilled, (state, action) => {
+          state.list = state.list.filter(p => p.id !== action.payload);
       })
-
-      //
-      // FETCH PRODUCT BY ID
-      //
+      // FETCH ID
       .addCase(fetchProductById.pending, (state) => {
-        state.loadingSelected = true;
-        state.selected = null;
+          state.loadingSelected = true;
+          state.selected = null;
       })
       .addCase(fetchProductById.fulfilled, (state, action) => {
-        state.loadingSelected = false;
-        state.selected = action.payload;
-      })
-      .addCase(fetchProductById.rejected, (state, action) => {
-        state.loadingSelected = false;
-        state.selected = null;
-        state.error = action.payload;
+          state.loadingSelected = false;
+          state.selected = action.payload;
       });
   },
 });
