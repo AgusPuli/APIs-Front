@@ -12,7 +12,42 @@ const getAuthHeaders = (getState) => {
   };
 };
 
-// 📥 FETCH: Obtener carrito del backend (GET /carts/cart)
+// Helper para obtener User ID de forma robusta
+const getUserId = (getState) => {
+    const state = getState();
+    // Intentar varias rutas posibles en el estado
+    let userId = state.user?.user?.id || state.user?.id;
+
+    // Fallback: Leer del localStorage si Redux falló o se recargó la página
+    if (!userId) {
+        try {
+            const storedUser = localStorage.getItem("user");
+            if (storedUser) {
+                const parsed = JSON.parse(storedUser);
+                userId = parsed.id;
+            }
+        } catch (e) {
+            console.error("Error parsing user from storage", e);
+        }
+    }
+    return userId;
+};
+
+// Helper para manejar respuestas
+const handleResponse = async (res) => {
+    if (!res.ok) {
+        const text = await res.text();
+        let message = text;
+        try {
+             const json = JSON.parse(text);
+             message = json.message || text;
+        } catch {}
+        throw new Error(message || `Error HTTP ${res.status}`);
+    }
+    return res.json();
+};
+
+// 📥 FETCH: Obtener carrito del backend
 export const fetchCart = createAsyncThunk(
   "cart/fetchCart",
   async (_, { rejectWithValue, getState }) => {
@@ -22,144 +57,126 @@ export const fetchCart = createAsyncThunk(
         method: "GET",
         headers: headers,
       });
-
-      if (!res.ok) {
-        const error = await res.text();
-        throw new Error(error || "Error al obtener carrito");
-      }
-
-      const data = await res.json();
-      return data;
+      return await handleResponse(res);
     } catch (err) {
       return rejectWithValue(err.message);
     }
   }
 );
 
-// ➕ CREATE/ADD: Agregar producto al carrito (POST /carts/add)
+// ➕ CREATE/ADD: Agregar producto al carrito
 export const addToCart = createAsyncThunk(
   "cart/addToCart",
   async ({ productId, quantity = 1 }, { rejectWithValue, getState }) => {
     try {
       const headers = getAuthHeaders(getState);
+      const userId = getUserId(getState);
+
+      if (!userId) throw new Error("Usuario no autenticado");
+
+      // Body plano: { userId, productId, quantity }
+      // Esto debe coincidir con tu CartAddRequest en Java
+      const body = JSON.stringify({ 
+          userId: userId, 
+          productId: productId, 
+          quantity: quantity 
+      });
+
       const res = await fetch(`${API_URL}/carts/add`, {
         method: "POST",
         headers: headers,
-        body: JSON.stringify({ productId, quantity }),
+        body: body
       });
 
-      if (!res.ok) {
-        const error = await res.text();
-        throw new Error(error || "Error al agregar producto");
-      }
-
-      const data = await res.json();
-      return data;
+      return await handleResponse(res);
     } catch (err) {
       return rejectWithValue(err.message);
     }
   }
 );
 
-// ✏️ UPDATE: Actualizar cantidad - DECREASE (PUT /carts/{userId}/item/{productId}/decrease)
+//  UPDATE: Actualizar cantidad (Inteligente: Add o Decrease)
 export const updateQuantity = createAsyncThunk(
   "cart/updateQuantity",
   async ({ productId, quantity }, { rejectWithValue, getState }) => {
     try {
       const headers = getAuthHeaders(getState);
+      const userId = getUserId(getState);
+
+      if (!userId) throw new Error("Usuario no autenticado");
+
       const state = getState();
-      const userId = state.user?.user?.id;
-
-      if (!userId) {
-        throw new Error("Usuario no autenticado");
-      }
-
-      // Si la cantidad aumenta, usamos addToCart
-      // Si disminuye, usamos el endpoint decrease
-      const currentItem = state.cart.items.find(item => item.id === productId);
       
-      if (!currentItem) {
-        throw new Error("Producto no encontrado en el carrito");
-      }
+      // 🛑 CORRECCIÓN DE BÚSQUEDA:
+      // Buscamos comparando el ID del producto, no el del renglón.
+      const currentItem = state.cart.items.find(item => 
+          item.productId === productId || item.product?.id === productId
+      );
+      
+      if (!currentItem) throw new Error("Producto no encontrado en carrito local");
+
+      let res;
 
       if (quantity > currentItem.quantity) {
-        // Aumentar: usar addToCart con la diferencia
+        // AUMENTAR: Calculamos diferencia
         const diff = quantity - currentItem.quantity;
-        const res = await fetch(`${API_URL}/carts/add`, {
+        res = await fetch(`${API_URL}/carts/add`, {
           method: "POST",
           headers: headers,
-          body: JSON.stringify({ productId, quantity: diff }),
+          body: JSON.stringify({ userId, productId, quantity: diff }),
         });
-
-        if (!res.ok) {
-          const error = await res.text();
-          throw new Error(error || "Error al actualizar cantidad");
-        }
-
-        return await res.json();
       } else {
-        // Disminuir: usar decrease endpoint
-        const res = await fetch(`${API_URL}/carts/${userId}/item/${productId}/decrease`, {
+        // DISMINUIR
+        res = await fetch(`${API_URL}/carts/${userId}/item/${productId}/decrease`, {
           method: "PUT",
           headers: headers,
         });
-
-        if (!res.ok) {
-          const error = await res.text();
-          throw new Error(error || "Error al actualizar cantidad");
-        }
-
-        return await res.json();
       }
+
+      if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || "Error al actualizar");
+      }
+      return await res.json();
+
     } catch (err) {
+      console.error("❌ Error updateQuantity:", err);
       return rejectWithValue(err.message);
     }
   }
 );
 
-// 🗑️ DELETE: Eliminar producto del carrito (DELETE /carts/{userId}/item/{productId})
+// 🗑️ DELETE: Eliminar producto
 export const removeFromCart = createAsyncThunk(
   "cart/removeFromCart",
   async (productId, { rejectWithValue, getState }) => {
     try {
       const headers = getAuthHeaders(getState);
-      const state = getState();
-      const userId = state.user?.user?.id;
+      const userId = getUserId(getState);
 
-      if (!userId) {
-        throw new Error("Usuario no autenticado");
-      }
+      if (!userId) throw new Error("Usuario no autenticado");
 
       const res = await fetch(`${API_URL}/carts/${userId}/item/${productId}`, {
         method: "DELETE",
         headers: headers,
       });
 
-      if (!res.ok) {
-        const error = await res.text();
-        throw new Error(error || "Error al eliminar producto");
-      }
-
-      const data = await res.json();
-      return data;
+      return await handleResponse(res);
     } catch (err) {
       return rejectWithValue(err.message);
     }
   }
 );
 
-// 🧹 CLEAR: Vaciar todo el carrito (DELETE /carts/{userId}/clear)
+// 🧹 CLEAR: Vaciar carrito
 export const clearCart = createAsyncThunk(
   "cart/clearCart",
   async (_, { rejectWithValue, getState }) => {
     try {
       const headers = getAuthHeaders(getState);
-      const state = getState();
-      const userId = state.user?.user?.id;
+      const userId = getUserId(getState);
 
-      if (!userId) {
-        throw new Error("Usuario no autenticado");
-      }
+      if (!userId) throw new Error("Usuario no autenticado");
 
       const res = await fetch(`${API_URL}/carts/${userId}/clear`, {
         method: "DELETE",
@@ -167,8 +184,8 @@ export const clearCart = createAsyncThunk(
       });
 
       if (!res.ok) {
-        const error = await res.text();
-        throw new Error(error || "Error al vaciar carrito");
+          // Si falla el clear del backend, al menos limpiamos el front
+          console.warn("Backend clear failed, clearing local anyway");
       }
 
       return { items: [], total: 0, discount: 0, discountCode: null };
@@ -178,87 +195,61 @@ export const clearCart = createAsyncThunk(
   }
 );
 
-// 🎟️ DISCOUNT: Aplicar código de descuento (POST /cart/discounts/apply)
+// 🎟️ DISCOUNT & PREVIEW (Sin cambios mayores)
 export const applyDiscount = createAsyncThunk(
   "cart/applyDiscount",
   async (code, { rejectWithValue, getState }) => {
     try {
       const headers = getAuthHeaders(getState);
-      const res = await fetch(`${API_URL}/cart/discounts/apply`, {
+      const res = await fetch(`${API_URL}/carts/discounts/apply`, { // Ajusté ruta a /carts/ si es consistente
         method: "POST",
         headers: headers,
         body: JSON.stringify({ code }),
       });
-
-      if (!res.ok) {
-        const error = await res.text();
-        throw new Error(error || "Código inválido");
-      }
-
-      const data = await res.json();
-      return data;
+      return await handleResponse(res);
     } catch (err) {
       return rejectWithValue(err.message);
     }
   }
 );
 
-// 🔍 PREVIEW: Vista previa del descuento (POST /cart/discounts/preview)
 export const previewDiscount = createAsyncThunk(
   "cart/previewDiscount",
   async (code, { rejectWithValue, getState }) => {
     try {
       const headers = getAuthHeaders(getState);
-      const res = await fetch(`${API_URL}/cart/discounts/preview`, {
+      const res = await fetch(`${API_URL}/carts/discounts/preview`, {
         method: "POST",
         headers: headers,
         body: JSON.stringify({ code }),
       });
-
-      if (!res.ok) {
-        const error = await res.text();
-        throw new Error(error || "Código inválido");
-      }
-
-      const data = await res.json();
-      return data;
+      return await handleResponse(res);
     } catch (err) {
       return rejectWithValue(err.message);
     }
   }
 );
 
-// 🛒 CHECKOUT PREVIEW: Vista previa del checkout (POST /carts/{userId}/checkout-preview)
 export const checkoutPreview = createAsyncThunk(
   "cart/checkoutPreview",
   async (_, { rejectWithValue, getState }) => {
     try {
       const headers = getAuthHeaders(getState);
-      const state = getState();
-      const userId = state.user?.user?.id;
-
-      if (!userId) {
-        throw new Error("Usuario no autenticado");
-      }
+      const userId = getUserId(getState);
+      if (!userId) throw new Error("Usuario no autenticado");
 
       const res = await fetch(`${API_URL}/carts/${userId}/checkout-preview`, {
         method: "POST",
         headers: headers,
       });
-
-      if (!res.ok) {
-        const error = await res.text();
-        throw new Error(error || "Error al obtener preview");
-      }
-
-      const data = await res.json();
-      return data;
+      return await handleResponse(res);
     } catch (err) {
       return rejectWithValue(err.message);
     }
   }
 );
 
+// SLICE
 const cartSlice = createSlice({
   name: "cart",
   initialState: {
@@ -275,128 +266,37 @@ const cartSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    builder
-      // 📥 FETCH CART
-      .addCase(fetchCart.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(fetchCart.fulfilled, (state, action) => {
+    // Matcher genérico para actualizar estado con la respuesta del carrito
+    // Esto evita repetir código en cada fulfilled
+    builder.addMatcher(
+      (action) => action.type.startsWith("cart/") && action.type.endsWith("/fulfilled"),
+      (state, action) => {
         state.loading = false;
-        state.items = action.payload.items || [];
-        state.total = action.payload.total || 0;
-        state.discount = action.payload.discount || 0;
-        state.discountCode = action.payload.discountCode || null;
-      })
-      .addCase(fetchCart.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
-      })
+        // Si la respuesta trae estructura de carrito, actualizamos todo
+        if (action.payload && action.payload.items) {
+            state.items = action.payload.items;
+            state.total = action.payload.total || 0;
+            state.discount = action.payload.discount || 0;
+            state.discountCode = action.payload.discountCode || null;
+        }
+      }
+    );
 
-      // ➕ ADD TO CART
-      .addCase(addToCart.pending, (state) => {
+    builder.addMatcher(
+      (action) => action.type.startsWith("cart/") && action.type.endsWith("/pending"),
+      (state) => {
         state.loading = true;
         state.error = null;
-      })
-      .addCase(addToCart.fulfilled, (state, action) => {
-        state.loading = false;
-        state.items = action.payload.items || [];
-        state.total = action.payload.total || 0;
-      })
-      .addCase(addToCart.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
-      })
+      }
+    );
 
-      // ✏️ UPDATE QUANTITY
-      .addCase(updateQuantity.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(updateQuantity.fulfilled, (state, action) => {
-        state.loading = false;
-        state.items = action.payload.items || [];
-        state.total = action.payload.total || 0;
-      })
-      .addCase(updateQuantity.rejected, (state, action) => {
+    builder.addMatcher(
+      (action) => action.type.startsWith("cart/") && action.type.endsWith("/rejected"),
+      (state, action) => {
         state.loading = false;
         state.error = action.payload;
-      })
-
-      // 🗑️ REMOVE FROM CART
-      .addCase(removeFromCart.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(removeFromCart.fulfilled, (state, action) => {
-        state.loading = false;
-        state.items = action.payload.items || [];
-        state.total = action.payload.total || 0;
-      })
-      .addCase(removeFromCart.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
-      })
-
-      // 🧹 CLEAR CART
-      .addCase(clearCart.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(clearCart.fulfilled, (state) => {
-        state.loading = false;
-        state.items = [];
-        state.total = 0;
-        state.discount = 0;
-        state.discountCode = null;
-      })
-      .addCase(clearCart.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
-      })
-
-      // 🎟️ APPLY DISCOUNT
-      .addCase(applyDiscount.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(applyDiscount.fulfilled, (state, action) => {
-        state.loading = false;
-        state.discount = action.payload.discount;
-        state.discountCode = action.payload.discountCode;
-      })
-      .addCase(applyDiscount.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
-      })
-
-      // 🔍 PREVIEW DISCOUNT
-      .addCase(previewDiscount.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(previewDiscount.fulfilled, (state, action) => {
-        state.loading = false;
-        // Preview no modifica el estado, solo retorna data
-      })
-      .addCase(previewDiscount.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
-      })
-
-      // 🛒 CHECKOUT PREVIEW
-      .addCase(checkoutPreview.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(checkoutPreview.fulfilled, (state, action) => {
-        state.loading = false;
-        // Preview data disponible en action.payload
-      })
-      .addCase(checkoutPreview.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
-      });
+      }
+    );
   },
 });
 

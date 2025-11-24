@@ -77,19 +77,43 @@ export default function Checkout() {
   const nextStep = () => setStep((prev) => prev + 1);
   const prevStep = () => setStep((prev) => prev - 1);
 
-// 6. Lógica Final: Confirmar Compra
+  // 6. Lógica Final: Confirmar Compra
   const handleConfirmOrder = () => {
     if (!token) {
         toast.error("Debes iniciar sesión");
         return;
     }
 
-    // Solo mandamos datos del pago. La orden se crea sola desde el carrito.
-    const paymentPayload = {
-        paymentMethod: "CREDIT_CARD"
+    // ✅ Construcción del objeto Payload
+    const orderPayload = {
+        items: items.map(item => ({
+            // Usamos item.id (del frontend) o item.productId (del backend)
+            productId: item.id || item.productId,
+            quantity: Number(item.quantity),
+            price: Number(item.price)
+        })),
+        total: total - discount,
+        shippingAddress: shippingData,
+        discountCode: discountCode || null
     };
 
-    dispatch(createOrder({ paymentData: paymentPayload }));
+    // ✅ Objeto de pago
+    const paymentPayload = {
+        paymentMethod: "CREDIT_CARD",
+        // Aquí podrías agregar más detalles del pago si tu backend lo requiere
+    };
+
+    // ✅ Validación preventiva en el Frontend
+    if (orderPayload.items.some(i => !i.productId)) {
+        toast.error("Error: Hay productos sin ID válido en el carrito");
+        return;
+    }
+
+    // ✅ Despachar la acción con los objetos correctos
+    dispatch(createOrder({ 
+      orderData: orderPayload,
+      paymentData: paymentPayload 
+    }));
   };
 
   return (
@@ -138,7 +162,7 @@ export default function Checkout() {
                 <h3 className="font-bold text-gray-900 dark:text-white mb-4 text-lg">Resumen del Pedido</h3>
                 <div className="space-y-3 mb-4 max-h-60 overflow-y-auto custom-scrollbar">
                   {items.map(item => (
-                      <div key={item.id} className="flex justify-between text-sm text-gray-600 dark:text-gray-300">
+                      <div key={item.id || item.productId} className="flex justify-between text-sm text-gray-600 dark:text-gray-300">
                           <div className="flex gap-2">
                              <span className="font-medium text-gray-900 dark:text-white">x{item.quantity}</span>
                              <span className="truncate max-w-[150px]" title={item.name}>{item.name}</span>

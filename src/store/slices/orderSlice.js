@@ -16,38 +16,32 @@ const getAuthHeaders = (getState) => {
 // 🧠 THUNK: CHECKOUT + PAGO
 export const createOrder = createAsyncThunk(
   "orders/createOrder",
+  // 1️⃣ CORRECCIÓN AQUÍ: Agregamos 'orderData' a los parámetros
   async ({ orderData, paymentData }, { rejectWithValue, getState, dispatch }) => {
     try {
       const headers = getAuthHeaders(getState);
 
-      // 1️⃣ PASO 1: Crear la Orden
-      console.log("📡 Enviando orden...", orderData);
+      console.log("📡 Enviando orden al backend:", orderData);
       
       const orderRes = await fetch(`${API_URL}/orders/checkout`, {
         method: "POST",
         headers: headers,
-        body: JSON.stringify(orderData),
+        // 2️⃣ CORRECCIÓN AQUÍ: Enviamos el body con los datos
+        body: JSON.stringify(orderData), 
       });
 
-      // ⚠️ MEJORAR MANEJO DE ERRORES
       if (!orderRes.ok) {
-        let errorMsg = "Error al crear orden";
-        try {
-          const errorData = await orderRes.json();
-          errorMsg = errorData.message || errorData.error || errorMsg;
-        } catch {
-          errorMsg = await orderRes.text() || errorMsg;
-        }
-        throw new Error(errorMsg);
+        const text = await orderRes.text();
+        throw new Error(text || "Error al crear la orden en el servidor");
       }
 
       const order = await orderRes.json();
-      console.log("✅ Orden creada:", order.id);
+      console.log("✅ Orden creada con ID:", order.id);
 
-      // 2️⃣ PASO 2: Procesar el Pago
+      // Paso 2: Procesar el Pago
       const paymentPayload = {
         orderId: order.id,
-        amount: order.total,
+        amount: order.total, 
         method: paymentData.paymentMethod || "CREDIT_CARD",
         status: "COMPLETED"
       };
@@ -60,31 +54,25 @@ export const createOrder = createAsyncThunk(
       });
 
       if (!paymentRes.ok) {
-        let paymentError = "Orden creada, pero falló el pago";
-        try {
-          const errorData = await paymentRes.json();
-          paymentError = errorData.message || errorData.error || paymentError;
-        } catch {
-          paymentError = await paymentRes.text() || paymentError;
-        }
-        throw new Error(paymentError);
+        throw new Error("Orden creada, pero falló el registro del pago.");
       }
       
       const paymentResult = await paymentRes.json();
       console.log("💳 Pago exitoso:", paymentResult);
 
-      // 3️⃣ PASO 3: Limpiar Carrito
+      // Paso 3: Limpiar Carrito
       dispatch(clearCart());
 
       return order; 
 
     } catch (err) {
       console.error("❌ Error en Checkout:", err);
-      return rejectWithValue(err.message || "Error desconocido en checkout");
+      return rejectWithValue(err.message);
     }
   }
 );
 
+// ... (El resto del slice se queda igual) ...
 const orderSlice = createSlice({
   name: "orders",
   initialState: {
@@ -115,7 +103,7 @@ const orderSlice = createSlice({
       })
       .addCase(createOrder.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload || "Error en el proceso de checkout";
+        state.error = action.payload;
       });
   },
 });

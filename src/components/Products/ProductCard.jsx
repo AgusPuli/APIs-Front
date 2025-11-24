@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom"; // 👈 Importar useNavigate
 import { FiEye, FiShoppingCart, FiLock } from "react-icons/fi";
 import { useDispatch, useSelector } from "react-redux";
 import { addToCart } from "../../store/slices/cartSlice";
@@ -7,26 +7,34 @@ import toast from "react-hot-toast";
 
 function ProductCard({ product }) {
     const dispatch = useDispatch();
+    const navigate = useNavigate(); // 👈 Usar navigate para la redirección
     
     // 1. Leer Usuario (para rol) y Carrito (para validar stock)
-    const { user } = useSelector((state) => state.user);
+    const { user, token } = useSelector((state) => state.user); // 👈 Agregar token
     const { items: cartItems } = useSelector((state) => state.cart);
 
     const isAdmin = user?.role === "ADMIN";
     const API_URL = "http://localhost:8080";
     const imageUrl = `${API_URL}/products/${product.id}/image/raw`;
 
-    const handleAddToCart = (e) => {
+    const handleAddToCart = async (e) => {
         e.preventDefault();
         e.stopPropagation();
         
-        // Validación de Admin
+        // 🛑 1. VALIDACIÓN DE AUTENTICACIÓN (Requisito de la regla)
+        if (!token) {
+            toast.error("Debes iniciar sesión para agregar al carrito.");
+            navigate("/login");
+            return;
+        }
+
+        // 2. Validación de Admin
         if (isAdmin) {
             toast.error("Los administradores no pueden realizar compras.");
             return;
         }
 
-        // 2. Validación de Stock Máximo
+        // 3. Validación de Stock Máximo
         const existingItem = cartItems.find(item => item.id === product.id);
         const currentQty = existingItem ? existingItem.quantity : 0;
         const maxStock = product.stock || 0;
@@ -36,9 +44,14 @@ function ProductCard({ product }) {
             return;
         }
 
-        // Si pasa las validaciones, agregamos
-        dispatch(addToCart(product));
-        toast.success("Agregado al carrito");
+        // 4. Disparar acción con unwrap para manejar errores
+        try {
+            await dispatch(addToCart({ productId: product.id, quantity: 1 })).unwrap();
+            toast.success("Agregado al carrito");
+        } catch (error) {
+            console.error("Error al agregar producto:", error);
+            toast.error("Error: No se pudo conectar con el carrito.");
+        }
     };
 
     const isActive = Boolean(product?.active);
@@ -61,17 +74,17 @@ function ProductCard({ product }) {
                     }}
                 />
                 
+                {/* Statuses... */}
                 {!isActive && (
                     <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                         <span className="text-white text-sm font-semibold">No disponible</span>
                     </div>
                 )}
-                 {isOutOfStock && isActive && (
+                {isOutOfStock && isActive && (
                     <div className="absolute top-2 right-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-md shadow-md">
                         Sin stock
                     </div>
                 )}
-                
                 {isAdmin && (
                     <div className="absolute top-2 left-2 bg-gray-800 text-white text-xs font-bold px-2 py-1 rounded-md shadow-md flex items-center gap-1">
                         <FiLock size={10} /> Admin
@@ -86,18 +99,20 @@ function ProductCard({ product }) {
                 
                 <div className="mt-auto pt-4 border-t border-gray-100 dark:border-gray-700">
                     <div className="flex items-center justify-between mb-3">
-                         <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                        <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                             ${product.price?.toLocaleString("es-AR")}
                         </span>
                     </div>
                     <div className="flex gap-2">
-                         <Link to={`/product/${product.id}`} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-all font-medium">
+                        <Link to={`/product/${product.id}`} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-all font-medium">
                             <FiEye size={18} />
                             <span className="text-sm">Ver</span>
                         </Link>
                         
+                        {/* Botón de Agregar */}
                         <button 
-                            onClick={(!isActive || isOutOfStock || isAdmin) ? undefined : handleAddToCart} 
+                            onClick={handleAddToCart} 
+                            // Deshabilitar si no activo, sin stock o si es admin
                             disabled={!isActive || isOutOfStock || isAdmin} 
                             className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all shadow-md ${
                                 isActive && !isOutOfStock && !isAdmin
