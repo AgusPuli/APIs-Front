@@ -6,7 +6,6 @@ const API_URL = "http://localhost:8080";
 // Helper para obtener headers con el token
 const getAuthHeaders = (getState) => {
   const state = getState();
-  // Intentamos leer de Redux Y de localStorage por seguridad
   const token = state.user?.token || localStorage.getItem("token");
   return {
     "Content-Type": "application/json",
@@ -17,33 +16,38 @@ const getAuthHeaders = (getState) => {
 // 🧠 THUNK: CHECKOUT + PAGO
 export const createOrder = createAsyncThunk(
   "orders/createOrder",
-  // Recibimos orderData (el carrito) y paymentData
   async ({ orderData, paymentData }, { rejectWithValue, getState, dispatch }) => {
     try {
       const headers = getAuthHeaders(getState);
 
-      // 1️⃣ PASO 1: Crear la Orden (CON BODY)
+      // 1️⃣ PASO 1: Crear la Orden
       console.log("📡 Enviando orden...", orderData);
       
       const orderRes = await fetch(`${API_URL}/orders/checkout`, {
         method: "POST",
         headers: headers,
-        body: JSON.stringify(orderData), // 👈 ¡AHORA SÍ ENVIAMOS EL CARRITO!
+        body: JSON.stringify(orderData),
       });
 
+      // ⚠️ MEJORAR MANEJO DE ERRORES
       if (!orderRes.ok) {
-        const text = await orderRes.text();
-        throw new Error(text || "Error backend al crear orden");
+        let errorMsg = "Error al crear orden";
+        try {
+          const errorData = await orderRes.json();
+          errorMsg = errorData.message || errorData.error || errorMsg;
+        } catch {
+          errorMsg = await orderRes.text() || errorMsg;
+        }
+        throw new Error(errorMsg);
       }
 
       const order = await orderRes.json();
       console.log("✅ Orden creada:", order.id);
 
       // 2️⃣ PASO 2: Procesar el Pago
-      // El backend espera un objeto específico para pagos
       const paymentPayload = {
         orderId: order.id,
-        amount: order.total, // Usamos el total real que calculó el backend
+        amount: order.total,
         method: paymentData.paymentMethod || "CREDIT_CARD",
         status: "COMPLETED"
       };
@@ -56,7 +60,14 @@ export const createOrder = createAsyncThunk(
       });
 
       if (!paymentRes.ok) {
-        throw new Error("Orden creada, pero falló el pago.");
+        let paymentError = "Orden creada, pero falló el pago";
+        try {
+          const errorData = await paymentRes.json();
+          paymentError = errorData.message || errorData.error || paymentError;
+        } catch {
+          paymentError = await paymentRes.text() || paymentError;
+        }
+        throw new Error(paymentError);
       }
       
       const paymentResult = await paymentRes.json();
@@ -69,8 +80,7 @@ export const createOrder = createAsyncThunk(
 
     } catch (err) {
       console.error("❌ Error en Checkout:", err);
-      // Devolvemos el mensaje exacto para que el Toast lo muestre
-      return rejectWithValue(err.message);
+      return rejectWithValue(err.message || "Error desconocido en checkout");
     }
   }
 );
@@ -105,7 +115,7 @@ const orderSlice = createSlice({
       })
       .addCase(createOrder.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload;
+        state.error = action.payload || "Error en el proceso de checkout";
       });
   },
 });

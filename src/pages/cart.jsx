@@ -1,21 +1,47 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { FiShoppingBag, FiArrowLeft } from "react-icons/fi";
 import { useSelector, useDispatch } from "react-redux"; 
+import toast from "react-hot-toast";
 import CartList from "../components/Cart/CartList";
 import OrderSummary from "../components/Cart/OrderSummary";
 import DiscountCode from "../components/Cart/DiscountCode";
-import { updateQuantity, removeFromCart, clearCart } from "../store/slices/cartSlice";
+import { 
+  fetchCart, 
+  updateQuantity, 
+  removeFromCart, 
+  clearCart 
+} from "../store/slices/cartSlice";
 
 export default function Cart() {
   const dispatch = useDispatch();
 
-  const { items, loading, total, discount, discountCode } = useSelector((state) => state.cart);
+  const { items, loading, total, discount, discountCode, error } = useSelector((state) => state.cart);
+  const { authenticated, token } = useSelector((state) => state.user);
 
+  // 🔄 CARGAR CARRITO AL MONTAR EL COMPONENTE
+  useEffect(() => {
+    if (authenticated && token) {
+      dispatch(fetchCart());
+    }
+  }, [authenticated, token, dispatch]);
+
+  // ⚠️ MOSTRAR ERRORES
+  useEffect(() => {
+    if (error) {
+      toast.error(error);
+    }
+  }, [error]);
+
+  // 🗑️ LIMPIAR CARRITO
   const handleClearCart = () => {
-      if(window.confirm("¿Estás seguro de vaciar el carrito?")) {
-          dispatch(clearCart());
-      }
-  }
+    if(window.confirm("¿Estás seguro de vaciar el carrito?")) {
+      dispatch(clearCart())
+        .unwrap()
+        .then(() => toast.success("Carrito vaciado"))
+        .catch((err) => toast.error(err));
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -24,27 +50,28 @@ export default function Cart() {
           {/* Header */}
           <div className="mb-8 flex justify-between items-end">
             <div>
-                <Link
+              <Link
                 to="/products"
                 className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium mb-4 transition-colors"
-                >
+              >
                 <FiArrowLeft size={20} />
                 <span>Continuar Comprando</span>
-                </Link>
-                <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">
+              </Link>
+              <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">
                 Carrito de Compras
-                </h1>
-                <p className="text-gray-600 dark:text-gray-400 mt-2">
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400 mt-2">
                 {items.length} {items.length === 1 ? "producto" : "productos"} en tu carrito
-                </p>
+              </p>
             </div>
             {items.length > 0 && (
-                <button 
-                    onClick={handleClearCart}
-                    className="text-red-500 hover:text-red-700 text-sm underline"
-                >
-                    Vaciar Carrito
-                </button>
+              <button 
+                onClick={handleClearCart}
+                disabled={loading}
+                className="text-red-500 hover:text-red-700 text-sm underline disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Vaciar Carrito
+              </button>
             )}
           </div>
 
@@ -78,9 +105,7 @@ export default function Cart() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* Lista de productos + cupón */}
               <div className="lg:col-span-2 space-y-6">
-                {/* CartList ya está conectado a Redux internamente, pero le pasamos items por si acaso o dejamos que él los lea */}
                 <CartList /> 
-
                 <DiscountCode />
               </div>
 
