@@ -45,8 +45,8 @@ export default function Sidebar({ currentSection, setSection }) {
     { id: "inicio", label: "Inicio", icon: HomeIcon },
     { id: "products", label: "Productos", icon: FiPackage },
     { id: "categories", label: "Categorías", icon: FiFolder },
-{ id: "orders", label: "Pedidos", icon: FiShoppingCart },
-    { id: "discounts", label: "Cupones", icon: FiTag }, // 👈 antes decía "coupons"
+// { id: "orders", label: "Pedidos", icon: FiShoppingCart },
+    { id: "discounts", label: "Cupones", icon: FiTag },
   ];
 
   return (
