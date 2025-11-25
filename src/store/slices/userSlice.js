@@ -1,75 +1,82 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import api from "../../config/axiosConfig";
 
-const API_URL = "http://localhost:8080";
-
+// Helper function
 function parseJwt(token) {
   try {
     const base64Url = token.split('.')[1];
     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
-        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-    }).join(''));
+    const jsonPayload = decodeURIComponent(
+      window.atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
     return JSON.parse(jsonPayload);
   } catch (e) {
+    console.error('Error al decodificar token:', e);
     return null;
   }
 }
 
+// ============================================================
+// ASYNC THUNKS (SIN TRY-CATCH)
+// ============================================================
+
 export const loginUser = createAsyncThunk(
   "user/login",
   async (credentials, { rejectWithValue }) => {
-    try {
-      console.log("📡 Enviando credenciales...");
-      const res = await fetch(`${API_URL}/auth/authenticate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(credentials),
-      });
-
-      if (!res.ok) throw new Error("Credenciales inválidas");
-      
-      const data = await res.json();
-      const token = data.access_token || data.token;
-      
-      if (!token) throw new Error("El servidor no devolvió un token");
-
-      // Decodificamos el token para sacar el email (subject)
-      const decoded = parseJwt(token);
-      const email = decoded ? decoded.sub : credentials.email; // Fallback al email del form
-
-      console.log("📡 Obteniendo perfil para:", email);
-      const userRes = await fetch(`${API_URL}/users/email/${email}`, {
-        headers: { Authorization: `Bearer ${token}` } // 👈 Usamos el token recién llegado
-      });
-
-      let userData = null;
-      if (userRes.ok) {
-        userData = await userRes.json();
-      } else {
-        console.warn("⚠ No se pudo cargar el perfil del usuario");
-      }
-
-      // GUARDAR TODO EN STORAGE
-      localStorage.setItem("token", token);
-      if (userData) localStorage.setItem("user", JSON.stringify(userData));
-      
-      return { token, user: userData };
-
-    } catch (err) {
-      console.error("❌ Error Login:", err);
-      return rejectWithValue(err.message);
+    const { data } = await api.post('/auth/authenticate', credentials);
+    
+    const token = data.access_token || data.token;
+    
+    // Validación - Solo aquí usamos rejectWithValue para errores custom
+    if (!token) {
+      return rejectWithValue({ message: 'El servidor no devolvió un token' });
     }
+
+    const decoded = parseJwt(token);
+    const email = decoded?.sub || credentials.email;
+
+    // Obtener datos del usuario
+    let userData = null;
+    try {
+      const userResponse = await api.get(`/users/email/${email}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      userData = userResponse.data;
+    } catch (error) {
+      console.warn("⚠ No se pudo cargar el perfil del usuario");
+    }
+
+    return { token, user: userData };
   }
 );
 
-// ESTADO INICIAL
-const token = localStorage.getItem("token");
-const user = localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user")) : null;
+export const registerUser = createAsyncThunk(
+  "user/register",
+  async (userData) => {
+    const { data } = await api.post('/auth/register', userData);
+    return data;
+  }
+);
+
+export const updateUserProfile = createAsyncThunk(
+  "user/updateProfile",
+  async (userData) => {
+    const { data } = await api.put('/users/profile', userData);
+    return data;
+  }
+);
+
+// ============================================================
+// SLICE
+// ============================================================
 
 const initialState = {
-  token: token || null,
-  user: user || null,
-  authenticated: !!token,
+  token: null,
+  user: null,
+  authenticated: false,
   loading: false,
   error: null,
 };
@@ -83,14 +90,17 @@ const userSlice = createSlice({
       state.user = null;
       state.authenticated = false;
       state.error = null;
-      localStorage.clear();
     },
     clearError: (state) => {
-        state.error = null;
-    }
+      state.error = null;
+    },
+    setUser: (state, action) => {
+      state.user = action.payload;
+    },
   },
   extraReducers: (builder) => {
     builder
+      // LOGIN
       .addCase(loginUser.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -104,10 +114,38 @@ const userSlice = createSlice({
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload;
+        state.error = action.payload?.message || action.error.message;
+        state.authenticated = false;
+      })
+      
+      // REGISTER
+      .addCase(registerUser.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(registerUser.fulfilled, (state) => {
+        state.loading = false;
+        state.error = null;
+      })
+      .addCase(registerUser.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message;
+      })
+      
+      // UPDATE PROFILE
+      .addCase(updateUserProfile.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(updateUserProfile.fulfilled, (state, action) => {
+        state.loading = false;
+        state.user = action.payload;
+      })
+      .addCase(updateUserProfile.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message;
       });
   },
 });
 
-export const { logout, clearError } = userSlice.actions;
+export const { logout, clearError, setUser } = userSlice.actions;
 export default userSlice.reducer;
