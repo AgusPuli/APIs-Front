@@ -1,65 +1,83 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import { clearCart } from "./cartSlice";
 import api from "../../config/axiosConfig";
 
 // ============================================================
-// ASYNC THUNKS (SIN TRY-CATCH)
+// THUNKS (Acciones asíncronas)
 // ============================================================
 
+// Crear una orden
 export const createOrder = createAsyncThunk(
   "orders/createOrder",
-  async ({ orderData, paymentData }, { dispatch, rejectWithValue }) => {
-    // PASO 1: Crear orden
-    const { data: order } = await api.post('/orders/checkout', orderData);
+  async ({ userId, items, shippingData, paymentData }, { dispatch, rejectWithValue }) => {
+    const orderPayload = {
+      userId,
+      items: items.map((item) => ({
+        productId: item.product?.id || item.productId,
+        quantity: item.quantity,
+        unitPrice: item.price,
+      })),
+      shippingAddress: shippingData.address,
+      shippingCity: shippingData.city,
+      shippingPostalCode: shippingData.postalCode,
+    };
 
-    // PASO 2: Verificar si ya existe pago
-    const paymentAlreadyExists = order.payment || (order.status && order.status !== "PENDING");
+    const { data: order } = await api.post("/orders", orderPayload);
 
-    if (paymentAlreadyExists) {
+    // Verificar si ya existe un pago
+    if (order.payment || order.payments?.length > 0) {
       console.log("ℹ️ El backend ya generó el pago automáticamente");
-      dispatch(clearCart());
       return order;
     }
 
-    // PASO 3: Crear pago manual si no existe
+    // Si no existe pago, crearlo manualmente
     const paymentPayload = {
       orderId: order.id,
       amount: order.total,
       method: paymentData.paymentMethod || "CREDIT_CARD",
-      status: "COMPLETED"
+      status: "COMPLETED",
     };
 
-    // Intentar crear pago, ignorar error 409 (conflicto - ya existe)
-    await api.post('/payments', paymentPayload).catch((error) => {
-      if (error.status === 409) {
-        console.warn("⚠️ Conflicto 409: El pago ya existía");
+    try {
+      await api.post("/payments", paymentPayload);
+      console.log("✅ Pago registrado correctamente");
+    } catch (err) {
+      if (err.status === 409 || err.message?.includes("409")) {
+        console.log("⚠️ El pago ya existe (409), continuando...");
       } else {
-        throw error; // Re-lanzar si es otro error
+        throw err;
       }
-    });
+    }
 
-    // PASO 4: Limpiar carrito
-    dispatch(clearCart());
     return order;
   }
 );
 
+// Obtener órdenes del usuario actual
 export const fetchUserOrders = createAsyncThunk(
   "orders/fetchUserOrders",
-  async () => {
-    const { data } = await api.get('/orders/user');
-    return data;
+  async (_, { getState }) => {
+    // ✅ Obtener userId del estado de Redux
+    const userId = getState().user?.user?.id;
+    
+    if (!userId) {
+      throw new Error("Usuario no autenticado");
+    }
+
+    const { data } = await api.get(`/orders/by-user/${userId}`);
+    return Array.isArray(data) ? data : data.content || [];
   }
 );
 
+// Obtener todas las órdenes (Admin)
 export const fetchAllOrders = createAsyncThunk(
   "orders/fetchAllOrders",
   async () => {
     const { data } = await api.get('/orders');
-    return data;
+    return Array.isArray(data) ? data : data.content || [];
   }
 );
 
+// Obtener orden por ID
 export const fetchOrderById = createAsyncThunk(
   "orders/fetchOrderById",
   async (orderId) => {
@@ -68,12 +86,11 @@ export const fetchOrderById = createAsyncThunk(
   }
 );
 
+// Actualizar estado de la orden (Admin)
 export const updateOrderStatus = createAsyncThunk(
   "orders/updateOrderStatus",
   async ({ orderId, status }) => {
-    const { data } = await api.patch(`/orders/${orderId}/status`, null, {
-      params: { status }
-    });
+    const { data } = await api.put(`/orders/${orderId}/status`, { status });
     return data;
   }
 );
@@ -114,16 +131,18 @@ const orderSlice = createSlice({
         state.loading = false;
         state.success = true;
         state.currentOrder = action.payload;
-        state.error = null;
+        state.list.unshift(action.payload);
       })
       .addCase(createOrder.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload?.message || action.error.message;
+        state.error = action.error.message;
+        state.success = false;
       })
-      
+
       // FETCH USER ORDERS
       .addCase(fetchUserOrders.pending, (state) => {
         state.loading = true;
+        state.error = null;
       })
       .addCase(fetchUserOrders.fulfilled, (state, action) => {
         state.loading = false;
@@ -133,10 +152,11 @@ const orderSlice = createSlice({
         state.loading = false;
         state.error = action.error.message;
       })
-      
-      // FETCH ALL ORDERS
+
+      // FETCH ALL ORDERS (Admin)
       .addCase(fetchAllOrders.pending, (state) => {
         state.loading = true;
+        state.error = null;
       })
       .addCase(fetchAllOrders.fulfilled, (state, action) => {
         state.loading = false;
@@ -146,10 +166,11 @@ const orderSlice = createSlice({
         state.loading = false;
         state.error = action.error.message;
       })
-      
+
       // FETCH ORDER BY ID
       .addCase(fetchOrderById.pending, (state) => {
         state.loading = true;
+        state.error = null;
       })
       .addCase(fetchOrderById.fulfilled, (state, action) => {
         state.loading = false;
@@ -159,15 +180,26 @@ const orderSlice = createSlice({
         state.loading = false;
         state.error = action.error.message;
       })
-      
+
       // UPDATE ORDER STATUS
+      .addCase(updateOrderStatus.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
       .addCase(updateOrderStatus.fulfilled, (state, action) => {
+        state.loading = false;
+        // Actualizar orden en la lista
         const index = state.list.findIndex(o => o.id === action.payload.id);
         if (index !== -1) {
           state.list[index] = action.payload;
         }
+        // Actualizar orden actual si coincide
+        if (state.currentOrder?.id === action.payload.id) {
+          state.currentOrder = action.payload;
+        }
       })
       .addCase(updateOrderStatus.rejected, (state, action) => {
+        state.loading = false;
         state.error = action.error.message;
       });
   },

@@ -1,14 +1,27 @@
 import { useState, useRef, useEffect } from "react";
+import { useDispatch } from "react-redux";
+import { createCategory } from "../../../store/slices/categorySlice";
 import { FiX } from "react-icons/fi";
+import toast from "react-hot-toast";
 
-export default function CreateCategoryModal({ token, onClose, onCategoryCreated }) {
-  const [types, setTypes] = useState([]); // ðŸ”¹ Lista de enums desde el backend
+export default function CreateCategoryModal({ onClose, onCategoryCreated }) {
+  const dispatch = useDispatch();
+  
+  // ✅ Tipos hardcodeados si el endpoint no funciona
+  // Si tu backend tiene estos tipos, agrégalos aquí
+  const categoryTypes = [
+    "APPLE",
+    "SAMSUNG",
+    "XIOMI"
+  ];
+
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [type, setType] = useState("");
   const [loading, setLoading] = useState(false);
   const modalRef = useRef(null);
 
-  // ðŸ”¹ Cerrar modal al hacer clic fuera
+  // Cerrar modal al hacer clic fuera
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (modalRef.current && !modalRef.current.contains(e.target)) {
@@ -19,49 +32,40 @@ export default function CreateCategoryModal({ token, onClose, onCategoryCreated 
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [onClose]);
 
-  // ðŸ”¹ Obtener los enums del backend (CategoryType)
-  useEffect(() => {
-    const fetchCategoryTypes = async () => {
-      try {
-        const res = await fetch("http://localhost:8080/categories/types");
-        if (!res.ok) throw new Error(`Error ${res.status}`);
-        const data = await res.json();
-        setTypes(data);
-      } catch (err) {
-        console.error("âŒ Error al cargar los tipos de categorÃ­a:", err);
-        setTypes([]);
-      }
-    };
-    fetchCategoryTypes();
-  }, []);
-
-  // ðŸ”¹ Crear categorÃ­a
+  // Crear categoría
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!name.trim()) {
+      toast.error("El nombre es requerido");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:8080/categories", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: token ? `Bearer ${token}` : "",
-        },
-        body: JSON.stringify({
-          name,         // uno de los valores del enum CategoryType
-          description,  // texto ingresado por el usuario
-        }),
-      });
+      const categoryData = {
+        name: name.trim(),
+        description: description.trim() || "",
+      };
 
-      if (!res.ok) throw new Error(`Error ${res.status}`);
+      // Solo agregar type si se seleccionó uno
+      if (type) {
+        categoryData.type = type;
+      }
 
-      const data = await res.json();
-      onCategoryCreated(data);
+      await dispatch(createCategory(categoryData)).unwrap();
+
+      toast.success("✅ Categoría creada exitosamente");
+      
+      if (onCategoryCreated) {
+        onCategoryCreated();
+      }
+      
       onClose();
-      alert("âœ… CategorÃ­a creada correctamente");
     } catch (err) {
-      console.error("Error al crear la categorÃ­a:", err);
-      alert("âŒ No se pudo crear la categorÃ­a");
+      console.error("❌ Error al crear categoría:", err);
+      toast.error("❌ " + (err.message || "Error al crear la categoría"));
     } finally {
       setLoading(false);
     }
@@ -71,13 +75,13 @@ export default function CreateCategoryModal({ token, onClose, onCategoryCreated 
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
       <div
         ref={modalRef}
-        className="bg-white dark:bg-gray-800 w-full max-w-lg rounded-xl shadow-2xl overflow-hidden"
+        className="bg-white dark:bg-gray-800 w-full max-w-md rounded-xl shadow-2xl overflow-hidden"
       >
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Crear Nueva CategorÃ­a
-          </h1>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Nueva Categoría
+          </h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
@@ -88,40 +92,53 @@ export default function CreateCategoryModal({ token, onClose, onCategoryCreated 
         </div>
 
         {/* Formulario */}
-        <form className="p-6 space-y-5" onSubmit={handleSubmit}>
-          {/* Nombre (Enum CategoryType) */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {/* Nombre */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Nombre de la CategorÃ­a
+              Nombre *
             </label>
-            <select
+            <input
+              type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+              placeholder="ej. Electrónica"
               required
-            >
-              <option value="">Seleccionar Tipo</option>
-              {types.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
+            />
           </div>
 
-          {/* DescripciÃ³n */}
+          {/* Descripción */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              DescripciÃ³n
+              Descripción
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              placeholder="Breve descripciÃ³n de esta categorÃ­a"
               className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-              required
+              placeholder="Descripción de la categoría"
+              rows="3"
             />
+          </div>
+
+          {/* Tipo (opcional) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Tipo (Opcional)
+            </label>
+            <select
+              value={type}
+              onChange={(e) => setType(e.target.value)}
+              className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+            >
+              <option value="">Sin tipo específico</option>
+              {categoryTypes.map((t) => (
+                <option key={t} value={t}>
+                  {t.charAt(0) + t.slice(1).toLowerCase().replace(/_/g, ' ')}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Botones */}
@@ -138,7 +155,7 @@ export default function CreateCategoryModal({ token, onClose, onCategoryCreated 
               disabled={loading}
               className="px-6 py-2.5 rounded-lg text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 font-semibold shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? "Creando..." : "Guardar CategorÃ­a"}
+              {loading ? "Creando..." : "Crear Categoría"}
             </button>
           </div>
         </form>

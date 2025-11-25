@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchOrderById, updateOrderStatus } from "../../../store/slices/orderSlice";
+import { fetchOrderById, updateOrderStatus } from "../../../store/slices/orderSlice"
 import {
   FiX,
   FiPackage,
@@ -32,8 +32,6 @@ export default function ViewOrderModal({ orderId, onClose }) {
 
   const statusColors = {
     PENDING: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300",
-    PROCESSING: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
-    COMPLETED: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
     CANCELLED: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
     PAID: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
   };
