@@ -10,21 +10,18 @@ export default function DiscountSection() {
     const { list: discounts, loading, error } = useSelector((state) => state.discounts);
     const [showCreate, setShowCreate] = useState(false);
 
-    // Obtener token del localStorage
-    const getToken = () => localStorage.getItem("jwt");
-
     useEffect(() => {
-        const token = getToken();
-        dispatch(fetchDiscounts(token));
+        dispatch(fetchDiscounts());
     }, [dispatch]);
 
     const handleCreate = async (payload) => {
         try {
-            const token = getToken();
-            await dispatch(createDiscount({ form: payload, token })).unwrap();
+            console.log("📤 DiscountSection sending payload:", payload);
+            await dispatch(createDiscount(payload)).unwrap();
+            console.log("✅ Discount created in DiscountSection");
             setShowCreate(false);
-            // Redux ya actualiza automáticamente la lista
         } catch (e) {
+            console.error("❌ Error in DiscountSection:", e);
             alert(e || "No se pudo crear el cupón");
         }
     };
@@ -35,7 +32,7 @@ export default function DiscountSection() {
             <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Cupones</h2>
                 <button
-                    className="px-4 py-2 rounded-lg bg-black text-white hover:opacity-90"
+                    className="px-4 py-2 rounded-lg bg-black dark:bg-blue-600 text-white hover:opacity-90 transition-opacity"
                     onClick={() => setShowCreate(true)}
                 >
                     + Crear cupón
@@ -44,10 +41,12 @@ export default function DiscountSection() {
 
             {/* Estados */}
             {loading && (
-                <div className="p-6 rounded-xl bg-white dark:bg-gray-800 shadow">Cargando…</div>
+                <div className="p-6 rounded-xl bg-white dark:bg-gray-800 shadow">
+                    Cargando...
+                </div>
             )}
             {error && (
-                <div className="p-4 rounded-xl bg-red-50 text-red-700 border border-red-200">
+                <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800">
                     {error}
                 </div>
             )}
