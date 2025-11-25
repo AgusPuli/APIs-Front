@@ -1,61 +1,42 @@
-import { useEffect, useState } from "react";
-import { useSelector } from "react-redux"; // 👈 Redux
+import { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
+import { fetchUserOrders } from "../store/slices/orderSlice";
 
 export default function OrdersPage() {
-  // 1. Obtener sesión de Redux
-  const { token, user } = useSelector((state) => state.user);
+  const dispatch = useDispatch();
   
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  const API_BASE = "http://localhost:8080";
+  // ✅ Leer del store de Redux
+  const { list: orders, loading } = useSelector((state) => state.orders);
+  const { user } = useSelector((state) => state.user);
 
   useEffect(() => {
-    const fetchOrders = async () => {
-      if (!user || !token) {
-          setLoading(false);
-          return;
-      }
-
-      try {
-        const res = await fetch(`${API_BASE}/orders/by-user/${user.id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        
-        if (!res.ok) throw new Error("Error al cargar órdenes");
-        
-        const data = await res.json();
-        // Soporte para paginación o lista directa
-        setOrders(Array.isArray(data) ? data : data.content || []);
-      } catch (err) {
-        console.error("Error fetchOrders:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchOrders();
-  }, [token, user]);
+    if (user) {
+      // ✅ Dispatch del thunk
+      dispatch(fetchUserOrders());
+    }
+  }, [dispatch, user]);
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="flex flex-col items-center gap-3">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
-            <p className="text-gray-500 dark:text-gray-400">Cargando historial...</p>
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
+          <p className="text-gray-500 dark:text-gray-400">Cargando historial...</p>
         </div>
       </div>
     );
   }
 
   if (!user) {
-      return (
-          <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-gray-50 dark:bg-gray-900">
-              <p className="text-gray-600 dark:text-gray-300 text-lg">Inicia sesión para ver tus órdenes.</p>
-              <Link to="/login" className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">Ir al Login</Link>
-          </div>
-      );
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-gray-50 dark:bg-gray-900">
+        <p className="text-gray-600 dark:text-gray-300 text-lg">Inicia sesión para ver tus órdenes.</p>
+        <Link to="/login" className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+          Ir al Login
+        </Link>
+      </div>
+    );
   }
 
   return (
@@ -67,8 +48,10 @@ export default function OrdersPage() {
 
         {orders.length === 0 ? (
           <div className="text-center py-16 bg-white dark:bg-gray-800 rounded-xl shadow-sm">
-             <p className="text-gray-500 dark:text-gray-400 text-lg mb-4">No tenés órdenes todavía 🛒</p>
-             <Link to="/products" className="text-blue-600 hover:underline font-medium">Ir a la tienda</Link>
+            <p className="text-gray-500 dark:text-gray-400 text-lg mb-4">No tenés órdenes todavía 🛒</p>
+            <Link to="/products" className="text-blue-600 hover:underline font-medium">
+              Ir a la tienda
+            </Link>
           </div>
         ) : (
           <div className="space-y-4">
@@ -97,12 +80,12 @@ export default function OrdersPage() {
                 <div className="text-gray-700 dark:text-gray-300 text-sm space-y-1">
                   <p>Fecha: {new Date(order.createdAt).toLocaleString("es-AR")}</p>
                   <div className="flex justify-between items-end mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-                      <Link to={`/orders/${order.id}`} className="text-blue-600 hover:text-blue-700 font-medium">
-                          Ver detalles &rarr;
-                      </Link>
-                      <p className="font-bold text-lg text-gray-900 dark:text-white">
-                        ${order.total?.toFixed(2)}
-                      </p>
+                    <Link to={`/orders/${order.id}`} className="text-blue-600 hover:text-blue-700 font-medium">
+                      Ver detalles &rarr;
+                    </Link>
+                    <p className="font-bold text-lg text-gray-900 dark:text-white">
+                      ${order.total?.toFixed(2)}
+                    </p>
                   </div>
                 </div>
               </div>

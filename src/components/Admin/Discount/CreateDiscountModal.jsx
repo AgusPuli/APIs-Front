@@ -3,14 +3,14 @@ import { useState } from "react";
 
 export default function CreateDiscountModal({ onClose, onSave }) {
     const [code, setCode] = useState("");
-    const [value, setValue] = useState(10);     // percentage (1–100)
+    const [value, setValue] = useState(10);     // percentage (1â€“100)
     const [active, setActive] = useState(true);
     const [startsAt, setStartsAt] = useState(""); // input type="datetime-local"
     const [endsAt, setEndsAt] = useState("");
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
 
-    // Devuelve "YYYY-MM-DDTHH:mm:ss" (sin Z) o null si está vacío/invalid
+    // Devuelve "YYYY-MM-DDTHH:mm:ss" (sin Z) o null si estÃ¡ vacÃ­o/invalid
     const toLocalDateTimeOrNull = (v) => {
         if (!v) return null;
         if (/^\d{4}-\d{2}-\d{2}$/.test(v)) v += "T00:00";
@@ -28,9 +28,9 @@ export default function CreateDiscountModal({ onClose, onSave }) {
 
     const validate = () => {
         const errs = [];
-        if (!code || code.trim().length < 3) errs.push("Código: mínimo 3 caracteres");
+        if (!code || code.trim().length < 3) errs.push("CÃ³digo: mÃ­nimo 3 caracteres");
         const pct = Number(value);
-        if (!Number.isFinite(pct) || pct <= 0 || pct > 100) errs.push("Porcentaje 1–100");
+        if (!Number.isFinite(pct) || pct <= 0 || pct > 100) errs.push("Porcentaje 1â€“100");
         if (startsAt && endsAt && new Date(startsAt) >= new Date(endsAt)) {
             errs.push("Inicio debe ser anterior a Fin");
         }
@@ -41,7 +41,7 @@ export default function CreateDiscountModal({ onClose, onSave }) {
         e.preventDefault();
         setError(null);
         const errs = validate();
-        if (errs.length) return setError(errs.join(" · "));
+        if (errs.length) return setError(errs.join(" Â· "));
 
         const payload = {
             code: code.trim().toUpperCase(),
@@ -59,7 +59,7 @@ export default function CreateDiscountModal({ onClose, onSave }) {
             await onSave(payload);
             onClose?.();
         } catch (e2) {
-            setError(e2?.message || "No se pudo crear el cupón");
+            setError(e2?.message || "No se pudo crear el cupÃ³n");
         } finally {
             setSaving(false);
         }
@@ -68,7 +68,7 @@ export default function CreateDiscountModal({ onClose, onSave }) {
     return (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
             <div className="w-full max-w-lg bg-white dark:bg-gray-800 rounded-2xl p-6 shadow">
-                <h3 className="text-lg font-semibold mb-4">Nuevo cupón</h3>
+                <h3 className="text-lg font-semibold mb-4">Nuevo cupÃ³n</h3>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     {error && (
@@ -78,7 +78,7 @@ export default function CreateDiscountModal({ onClose, onSave }) {
                     )}
 
                     <div>
-                        <label className="block text-sm mb-1">Código</label>
+                        <label className="block text-sm mb-1">CÃ³digo</label>
                         <input
                             type="text"
                             value={code}
@@ -104,7 +104,7 @@ export default function CreateDiscountModal({ onClose, onSave }) {
                         </div>
 
                         <div className="flex items-end">
-                            <div className="text-sm text-gray-500">Se aplicará como %.</div>
+                            <div className="text-sm text-gray-500">Se aplicarÃ¡ como %.</div>
                         </div>
                     </div>
 
@@ -154,7 +154,7 @@ export default function CreateDiscountModal({ onClose, onSave }) {
                             className="px-4 py-2 rounded-lg bg-black text-white disabled:opacity-60"
                             disabled={saving}
                         >
-                            {saving ? "Creando..." : "Crear cupón"}
+                            {saving ? "Creando..." : "Crear cupÃ³n"}
                         </button>
                     </div>
                 </form>

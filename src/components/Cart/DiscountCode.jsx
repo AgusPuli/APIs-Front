@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useDispatch } from "react-redux";
-import { applyDiscount } from "../../store/slices/cartSlice";
+import { applyDiscount, previewDiscount } from "../../store/slices/cartSlice";
+import toast from "react-hot-toast";
 
 export default function DiscountCode() {
   const dispatch = useDispatch();
@@ -11,51 +12,49 @@ export default function DiscountCode() {
 
   const canSend = code.trim().length >= 3 && !loading;
 
-  // Lógica para previsualizar (Solo visual)
   const handlePreview = async () => {
+    if (!canSend) return;
+
     setLoading(true);
     try {
-      // Simulamos llamada a tu backend: POST /cart/discounts/preview
-      // Reemplaza esta URL por la real de tu API
-      const res = await fetch(`http://localhost:8080/admin/discounts/preview?code=${code}`, {
-         method: 'POST' 
+      const result = await dispatch(previewDiscount(code)).unwrap();
+      setLastPreview({ 
+        code, 
+        message: "Cupón válido",
+        discountAmount: result.discountAmount || result.discount || 0,
+        error: false
       });
-      
-      if(res.ok) {
-          const data = await res.json();
-          setLastPreview({ code, ...data });
-      } else {
-          setLastPreview({ code, message: "Cupón inválido", error: true });
-      }
+      toast.success(`Descuento disponible: $${result.discountAmount?.toFixed(2) || 0}`);
     } catch (error) {
-      console.error(error);
-      setLastPreview({ code, message: "Error al validar", error: true });
+      setLastPreview({ 
+        code, 
+        message: error.message || "Cupón inválido", 
+        error: true 
+      });
+      toast.error(error.message || "Cupón inválido");
     } finally {
       setLoading(false);
     }
   };
 
-  // Lógica para APLICAR (Impacta en Redux)
   const handleApply = async () => {
+    if (!canSend) return;
+
     setLoading(true);
     try {
-      // Validar contra backend primero
-       const res = await fetch(`http://localhost:8080/admin/discounts/preview?code=${code}`, {
-         method: 'POST' 
+      const result = await dispatch(applyDiscount(code)).unwrap();
+      
+      setLastPreview({ 
+        code, 
+        message: "Cupón aplicado correctamente",
+        discountAmount: result.discount || 0,
+        error: false
       });
       
-      if(res.ok) {
-          const data = await res.json();
-          //  DESPACHAR A REDUX
-          dispatch(applyDiscount({ 
-              code: code, 
-              amount: data.discountAmount || 0 
-          }));
-          // Limpiar input o mostrar éxito
-          setLastPreview({ code, message: "Cupón aplicado correctamente", discountAmount: data.discountAmount });
-      }
+      toast.success("✅ Cupón aplicado correctamente");
+      setCode(""); // Limpiar input
     } catch (error) {
-      console.error(error);
+      toast.error("❌ " + (error.message || "Error al aplicar el cupón"));
     } finally {
       setLoading(false);
     }
@@ -64,7 +63,7 @@ export default function DiscountCode() {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border border-gray-200 dark:border-gray-700">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
-        Cupon de Descuento
+        Cupón de Descuento
       </h3>
 
       <div className="flex flex-col sm:flex-row gap-3">
@@ -72,7 +71,7 @@ export default function DiscountCode() {
           type="text"
           value={code}
           onChange={(e) => setCode(e.target.value.toUpperCase())}
-          placeholder="Ingresa tu codigo (p. ej., BLACK25)"
+          placeholder="Ingresa tu código (ej: BLACK25)"
           className="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 dark:bg-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
         />
 
@@ -82,8 +81,8 @@ export default function DiscountCode() {
             onClick={handlePreview}
             className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
               canSend
-                ? "hover:bg-gray-100 dark:hover:bg-gray-700"
-                : "opacity-50 cursor-not-allowed"
+                ? "hover:bg-gray-100 dark:hover:bg-gray-700 border-gray-300 dark:border-gray-600"
+                : "opacity-50 cursor-not-allowed border-gray-200 dark:border-gray-700"
             }`}
           >
             {loading ? "..." : "Previsualizar"}
@@ -104,23 +103,28 @@ export default function DiscountCode() {
       </div>
 
       {lastPreview && (
-        <div className="mt-4 text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
-          <p>
-            <span className="font-semibold text-gray-900 dark:text-white">
-              Codigo:
-            </span>{" "}
-            {lastPreview.code}
+        <div className={`mt-4 text-sm p-3 rounded-lg border ${
+          lastPreview.error 
+            ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800" 
+            : "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
+        }`}>
+          <p className="text-gray-900 dark:text-white">
+            <span className="font-semibold">Código:</span> {lastPreview.code}
           </p>
 
           {lastPreview.message && (
-            <p className={`text-xs mt-1 ${lastPreview.error ? "text-red-500" : "text-gray-500"}`}>
-                {lastPreview.message}
+            <p className={`text-xs mt-1 ${
+              lastPreview.error 
+                ? "text-red-600 dark:text-red-400" 
+                : "text-green-600 dark:text-green-400"
+            }`}>
+              {lastPreview.message}
             </p>
           )}
 
-          {typeof lastPreview.discountAmount === "number" && (
+          {typeof lastPreview.discountAmount === "number" && !lastPreview.error && (
             <p className="font-medium text-green-600 dark:text-green-400 mt-1">
-              Descuento estimado: ${lastPreview.discountAmount.toFixed(2)}
+              Descuento: ${lastPreview.discountAmount.toFixed(2)}
             </p>
           )}
         </div>

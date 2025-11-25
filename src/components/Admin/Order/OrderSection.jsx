@@ -1,62 +1,17 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchAllOrders } from "../../../store/slices/orderSlice";
 import OrderTable from "./OrderTable";
 import ViewOrderModal from "./ViewOrderModal";
-import { useSession } from "../../Context/SessionContext";
-
-const mockOrders = [
-  {
-    id: "A001",
-    customer: "Juan Pérez",
-    email: "juanperez@example.com",
-    total: 154000,
-    status: "Procesando",
-    createdAt: "2025-10-01T10:24:00Z",
-    items: [
-      { id: "p1", name: "iPhone 15 Pro", quantity: 1, price: 120000 },
-      { id: "p2", name: "Cargador MagSafe", quantity: 1, price: 34000 },
-    ],
-  },
-  {
-    id: "A002",
-    customer: "María Gómez",
-    email: "maria@example.com",
-    total: 89000,
-    status: "Completado",
-    createdAt: "2025-10-05T14:12:00Z",
-    items: [
-      { id: "p3", name: "Auriculares Bluetooth", quantity: 2, price: 44500 },
-    ],
-  },
-];
 
 export default function OrderSection() {
-  const { token } = useSession();
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const dispatch = useDispatch();
+  const { list: orders, loading } = useSelector((state) => state.orders);
   const [selectedOrder, setSelectedOrder] = useState(null);
 
-  const fetchOrders = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("http://localhost:8080/api/orders", {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-
-      if (!res.ok) throw new Error("Failed to fetch");
-      const data = await res.json();
-
-      setOrders(data?.length ? data : mockOrders);
-    } catch (err) {
-      console.error("Error fetching orders:", err);
-      setOrders(mockOrders);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchOrders();
-  }, [token]);
+    dispatch(fetchAllOrders());
+  }, [dispatch]);
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
@@ -73,7 +28,7 @@ export default function OrderSection() {
 
       {loading ? (
         <div className="text-center py-12">
-          <div className="spinner mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mx-auto mb-4"></div>
           <p className="text-gray-600 dark:text-gray-400">Cargando pedidos...</p>
         </div>
       ) : (
@@ -81,7 +36,10 @@ export default function OrderSection() {
       )}
 
       {selectedOrder && (
-        <ViewOrderModal order={selectedOrder} onClose={() => setSelectedOrder(null)} />
+        <ViewOrderModal
+          order={selectedOrder}
+          onClose={() => setSelectedOrder(null)}
+        />
       )}
     </div>
   );

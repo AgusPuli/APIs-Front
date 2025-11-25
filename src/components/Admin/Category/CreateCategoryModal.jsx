@@ -2,13 +2,13 @@ import { useState, useRef, useEffect } from "react";
 import { FiX } from "react-icons/fi";
 
 export default function CreateCategoryModal({ token, onClose, onCategoryCreated }) {
-  const [types, setTypes] = useState([]); // 🔹 Lista de enums desde el backend
+  const [types, setTypes] = useState([]); // ðŸ”¹ Lista de enums desde el backend
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const modalRef = useRef(null);
 
-  // 🔹 Cerrar modal al hacer clic fuera
+  // ðŸ”¹ Cerrar modal al hacer clic fuera
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (modalRef.current && !modalRef.current.contains(e.target)) {
@@ -19,7 +19,7 @@ export default function CreateCategoryModal({ token, onClose, onCategoryCreated 
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [onClose]);
 
-  // 🔹 Obtener los enums del backend (CategoryType)
+  // ðŸ”¹ Obtener los enums del backend (CategoryType)
   useEffect(() => {
     const fetchCategoryTypes = async () => {
       try {
@@ -28,14 +28,14 @@ export default function CreateCategoryModal({ token, onClose, onCategoryCreated 
         const data = await res.json();
         setTypes(data);
       } catch (err) {
-        console.error("❌ Error al cargar los tipos de categoría:", err);
+        console.error("âŒ Error al cargar los tipos de categorÃ­a:", err);
         setTypes([]);
       }
     };
     fetchCategoryTypes();
   }, []);
 
-  // 🔹 Crear categoría
+  // ðŸ”¹ Crear categorÃ­a
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -58,10 +58,10 @@ export default function CreateCategoryModal({ token, onClose, onCategoryCreated 
       const data = await res.json();
       onCategoryCreated(data);
       onClose();
-      alert("✅ Categoría creada correctamente");
+      alert("âœ… CategorÃ­a creada correctamente");
     } catch (err) {
-      console.error("Error al crear la categoría:", err);
-      alert("❌ No se pudo crear la categoría");
+      console.error("Error al crear la categorÃ­a:", err);
+      alert("âŒ No se pudo crear la categorÃ­a");
     } finally {
       setLoading(false);
     }
@@ -76,7 +76,7 @@ export default function CreateCategoryModal({ token, onClose, onCategoryCreated 
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Crear Nueva Categoría
+            Crear Nueva CategorÃ­a
           </h1>
           <button
             onClick={onClose}
@@ -92,7 +92,7 @@ export default function CreateCategoryModal({ token, onClose, onCategoryCreated 
           {/* Nombre (Enum CategoryType) */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Nombre de la Categoría
+              Nombre de la CategorÃ­a
             </label>
             <select
               value={name}
@@ -109,16 +109,16 @@ export default function CreateCategoryModal({ token, onClose, onCategoryCreated 
             </select>
           </div>
 
-          {/* Descripción */}
+          {/* DescripciÃ³n */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Descripción
+              DescripciÃ³n
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              placeholder="Breve descripción de esta categoría"
+              placeholder="Breve descripciÃ³n de esta categorÃ­a"
               className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
               required
             />
@@ -138,7 +138,7 @@ export default function CreateCategoryModal({ token, onClose, onCategoryCreated 
               disabled={loading}
               className="px-6 py-2.5 rounded-lg text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 font-semibold shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? "Creando..." : "Guardar Categoría"}
+              {loading ? "Creando..." : "Guardar CategorÃ­a"}
             </button>
           </div>
         </form>

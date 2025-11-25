@@ -1,57 +1,42 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchProducts } from "../../store/slices/productSlice";
 import ProductCard from "../Products/ProductCard";
 import { Link } from "react-router-dom";
 
 export default function FeaturedProducts() {
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const dispatch = useDispatch();
+  
+  // ✅ Leer del store de Redux
+  const { list: products, loading } = useSelector((state) => state.products);
 
   useEffect(() => {
-    async function fetchProducts() {
-      try {
-        const res = await fetch("http://localhost:8080/products");
-        if (!res.ok) throw new Error("Error al obtener los productos");
-        const data = await res.json();
-
-        const array = Array.isArray(data) ? data : data.content || [];
-
-        const normalized = array.map((p) => ({
-          id: p.id,
-          name: p.name,
-          description: p.description || "Sin descripción disponible",
-          price: p.price || 0,
-          category: p.category?.name || "Sin categoría",
-          // IMPORTANTE: normalizar active y stock
-          active: typeof p.active === "boolean" ? p.active : true,
-          stock: typeof p.stock === "number" ? p.stock : (p.stock ?? 0),
-          // El ProductCard no usa 'images' porque busca la imagen por endpoint,
-          // pero lo dejamos por compatibilidad
-          images: Array.isArray(p.images) ? p.images : [p.images || "/placeholder.jpg"],
-          featured: !!p.featured,
-          subcategories: [],
-          colors: [],
-          storageOptions: [],
-        }));
-
-        // Opcional: mostrar solo productos activos en destacados
-        //const onlyActive = normalized.filter((p) => p.active);
-
-        setProducts(normalized.slice(0, 3));
-      } catch (err) {
-        console.error("❌ Error cargando productos:", err);
-      } finally {
-        setLoading(false);
-      }
+    // ✅ Solo cargar si no hay productos
+    if (products.length === 0) {
+      dispatch(fetchProducts());
     }
+  }, [dispatch, products.length]);
 
-    fetchProducts();
-  }, []);
+  // Mostrar solo los primeros 3 productos activos
+  const featuredProducts = products
+    .filter(p => p.active)
+    .slice(0, 3);
 
-  if (loading)
-    return <section className="py-16 text-center text-gray-500">Cargando productos...</section>;
+  if (loading) {
+    return (
+      <section className="py-16 text-center text-gray-500">
+        Cargando productos...
+      </section>
+    );
+  }
 
-  if (!products.length)
-    return <section className="py-16 text-center text-gray-500">No hay productos disponibles</section>;
+  if (featuredProducts.length === 0) {
+    return (
+      <section className="py-16 text-center text-gray-500">
+        No hay productos disponibles
+      </section>
+    );
+  }
 
   return (
     <section
@@ -69,7 +54,7 @@ export default function FeaturedProducts() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
-          {products.map((product) => (
+          {featuredProducts.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
         </div>

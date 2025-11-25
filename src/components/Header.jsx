@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useLocation } from "react-router-dom";
+import { useSelector, useDispatch } from "react-redux";
+import { logout } from "../store/slices/userSlice";
 import Logo from "./Header/Logo";
 import NavDesktop from "./Header/NavDesktop";
 import SearchBar from "./Header/SearchBar";
 import CartButton from "./Header/CartButton";
 import MobileMenu from "./Header/MobileMenu";
 import UserProfileButton from "./Header/UserProfileButton";
-import { useSession } from "./Context/SessionContext"; 
 
 export default function Header({
   searchQuery,
@@ -19,13 +20,20 @@ export default function Header({
 }) {
   const location = useLocation();
   const pathname = location.pathname;
+  const dispatch = useDispatch();
+  
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const showSearch = pathname === "/products";
 
-  const { isLoggedIn, logout, user, loading } = useSession();
+  // ✅ Obtener del store de Redux
+  const { user, authenticated, loading } = useSelector((state) => state.user);
 
   // Normaliza el rol para soportar "ADMIN" o "ROLE_ADMIN"
   const isAdmin = (user?.role ?? "").replace(/^ROLE_/, "") === "ADMIN";
+
+  const handleLogout = () => {
+    dispatch(logout());
+  };
 
   return (
     <header className="sticky top-0 z-50 glass-effect shadow-sm bg-[#0D1029]">
@@ -53,8 +61,8 @@ export default function Header({
               {/* Botón de usuario solo en desktop */}
               <div className="hidden md:flex">
                 <UserProfileButton
-                  isLoggedIn={isLoggedIn}
-                  logout={logout}
+                  isLoggedIn={authenticated}
+                  logout={handleLogout}
                 />
               </div>
 
@@ -80,23 +88,31 @@ export default function Header({
               </button>
             </div>
           </div>
+
+          {/* SearchBar (solo en /products) */}
+          {showSearch && (
+            <div className="py-4">
+              <SearchBar
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                selectedCategory={selectedCategory}
+                setSelectedCategory={setSelectedCategory}
+                selectedSubcategory={selectedSubcategory}
+                setSelectedSubcategory={setSelectedSubcategory}
+                products={products}
+              />
+            </div>
+          )}
         </div>
       </div>
 
       {/* Menú móvil */}
       <MobileMenu
         isOpen={isMobileMenuOpen}
-        setOpen={setMobileMenuOpen}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        selectedCategory={selectedCategory}
-        setSelectedCategory={setSelectedCategory}
-        selectedSubcategory={selectedSubcategory}
-        setSelectedSubcategory={setSelectedSubcategory}
-        products={products}
+        onClose={() => setMobileMenuOpen(false)}
         pathname={pathname}
-        isLoggedIn={isLoggedIn}
-        logout={logout}
+        isLoggedIn={authenticated}
+        logout={handleLogout}
       />
     </header>
   );

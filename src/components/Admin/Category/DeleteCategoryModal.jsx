@@ -1,15 +1,14 @@
-// src/components/Admin/Category/CreateCategoryModal.jsx
-import { useState, useRef, useEffect } from "react";
-import { FiX } from "react-icons/fi";
+import { useRef, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { deleteCategory } from "../../store/slices/categorySlice";
+import { FiX, FiAlertTriangle } from "react-icons/fi";
+import toast from "react-hot-toast";
 
-export default function CreateCategoryModal({ token, onClose, onCategoryCreated }) {
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [loading, setLoading] = useState(false);
-
+export default function DeleteCategoryModal({ category, onClose, onDeleted }) {
+  const dispatch = useDispatch();
+  const { loading } = useSelector((state) => state.categories);
   const modalRef = useRef(null);
 
-  // Cerrar modal al hacer clic fuera
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (modalRef.current && !modalRef.current.contains(e.target)) {
@@ -20,34 +19,14 @@ export default function CreateCategoryModal({ token, onClose, onCategoryCreated 
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [onClose]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-
+  const handleDelete = async () => {
     try {
-      const res = await fetch("http://localhost:8080/categories", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: token ? `Bearer ${token}` : "",
-        },
-        body: JSON.stringify({
-          name, // debe ser uno de los valores del enum CategoryType
-          description,
-        }),
-      });
-
-      if (!res.ok) throw new Error(`Error ${res.status}`);
-
-      const data = await res.json();
-      onCategoryCreated(data);
+      await dispatch(deleteCategory(category.id)).unwrap();
+      onDeleted(category.id);
       onClose();
-      alert("✅ Categoría creada correctamente");
+      toast.success("✅ Categoría eliminada correctamente");
     } catch (err) {
-      console.error("Error al crear la categoría:", err);
-      alert("❌ No se pudo crear la categoría");
-    } finally {
-      setLoading(false);
+      toast.error("❌ " + (err.message || "No se pudo eliminar la categoría"));
     }
   };
 
@@ -55,75 +34,44 @@ export default function CreateCategoryModal({ token, onClose, onCategoryCreated 
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
       <div
         ref={modalRef}
-        className="bg-white dark:bg-gray-800 w-full max-w-lg rounded-xl shadow-2xl overflow-hidden"
+        className="bg-white dark:bg-gray-800 w-full max-w-md rounded-xl shadow-2xl overflow-hidden"
       >
-        {/* Header */}
-        <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Crear Nueva Categoría
-          </h1>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-            title="Cerrar"
-          >
-            <FiX size={24} />
-          </button>
-        </div>
-
-        {/* Formulario */}
-        <form className="p-6 space-y-5" onSubmit={handleSubmit}>
-          {/* Nombre (Enum CategoryType) */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Nombre de la Categoría
-            </label>
-            <select
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-              required
-            >
-              <option value="">Seleccionar Tipo</option>
-              <option value="SMARTPHONE">SMARTPHONE</option>
-              <option value="TABLET">TABLET</option>
-              <option value="LAPTOP">LAPTOP</option>
-              <option value="ACCESSORY">ACCESSORY</option>
-            </select>
+        <div className="p-6">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="flex-shrink-0 w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+              <FiAlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Eliminar Categoría
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Esta acción no se puede deshacer
+              </p>
+            </div>
           </div>
 
-          {/* Descripción */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Descripción
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              placeholder="Breve descripción de esta categoría"
-              className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-            />
-          </div>
+          <p className="text-gray-700 dark:text-gray-300 mb-6">
+            ¿Estás seguro que deseas eliminar la categoría <strong>{category.name}</strong>?
+          </p>
 
-          {/* Botones */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex justify-end gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-2.5 rounded-lg text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 font-semibold transition-colors"
+              className="px-4 py-2 rounded-lg text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 font-medium transition-colors"
             >
               Cancelar
             </button>
             <button
-              type="submit"
+              onClick={handleDelete}
               disabled={loading}
-              className="px-6 py-2.5 rounded-lg text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 font-semibold shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 rounded-lg text-white bg-red-600 hover:bg-red-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? "Creando..." : "Guardar Categoría"}
+              {loading ? "Eliminando..." : "Eliminar"}
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );

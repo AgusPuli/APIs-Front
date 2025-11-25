@@ -1,15 +1,17 @@
-// src/components/Admin/Category/EditCategoryModal.jsx
 import { useState, useRef, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { updateCategory } from "../../store/slices/categorySlice";
 import { FiX } from "react-icons/fi";
+import toast from "react-hot-toast";
 
-export default function EditCategoryModal({ token, category, onClose, onCategoryUpdated }) {
+export default function EditCategoryModal({ category, onClose, onCategoryUpdated }) {
+  const dispatch = useDispatch();
+  const { loading } = useSelector((state) => state.categories);
+  
   const [name, setName] = useState(category.name || "");
   const [description, setDescription] = useState(category.description || "");
-  const [loading, setLoading] = useState(false);
-
   const modalRef = useRef(null);
 
-  // Cerrar modal al hacer clic fuera
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (modalRef.current && !modalRef.current.contains(e.target)) {
@@ -22,32 +24,18 @@ export default function EditCategoryModal({ token, category, onClose, onCategory
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
 
     try {
-      const res = await fetch(`http://localhost:8080/categories/${category.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: token ? `Bearer ${token}` : "",
-        },
-        body: JSON.stringify({
-          name, // CategoryType (enum)
-          description,
-        }),
-      });
-
-      if (!res.ok) throw new Error(`Error HTTP ${res.status}`);
-
-      const updated = await res.json();
+      const updated = await dispatch(updateCategory({
+        id: category.id,
+        categoryData: { name, description }
+      })).unwrap();
+      
       onCategoryUpdated(updated);
       onClose();
-      alert("✅ Categoría actualizada correctamente");
+      toast.success("✅ Categoría actualizada correctamente");
     } catch (err) {
-      console.error("Error al actualizar categoría:", err);
-      alert("❌ No se pudo actualizar la categoría");
-    } finally {
-      setLoading(false);
+      toast.error("❌ " + (err.message || "No se pudo actualizar la categoría"));
     }
   };
 
@@ -57,7 +45,6 @@ export default function EditCategoryModal({ token, category, onClose, onCategory
         ref={modalRef}
         className="bg-white dark:bg-gray-800 w-full max-w-lg rounded-xl shadow-2xl overflow-hidden"
       >
-        {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
             Editar Categoría
@@ -71,9 +58,7 @@ export default function EditCategoryModal({ token, category, onClose, onCategory
           </button>
         </div>
 
-        {/* Formulario */}
         <form className="p-6 space-y-6" onSubmit={handleSubmit}>
-          {/* Nombre (CategoryType enum) */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Nombre de la Categoría
@@ -92,7 +77,6 @@ export default function EditCategoryModal({ token, category, onClose, onCategory
             </select>
           </div>
 
-          {/* Descripción */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Descripción
@@ -106,7 +90,6 @@ export default function EditCategoryModal({ token, category, onClose, onCategory
             />
           </div>
 
-          {/* Footer */}
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
             <button
               type="button"
