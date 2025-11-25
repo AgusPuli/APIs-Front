@@ -90,7 +90,7 @@ export default function Checkout() {
             quantity: Number(item.quantity),
             price: Number(item.price)
         })),
-        total: total - discount,
+        total: total,
         shippingAddress: {
             ...shippingData,
             // Si tu backend espera un string en lugar de objeto, descomenta esto:
@@ -198,7 +198,7 @@ export default function Checkout() {
                     )}
                     <div className="flex justify-between font-bold text-lg text-gray-900 dark:text-white pt-2 border-t border-dashed border-gray-200 dark:border-gray-700 mt-2">
                         <span>Total a Pagar</span>
-                        <span className="text-blue-600 dark:text-blue-400">${(total - discount).toFixed(2)}</span>
+                        <span className="text-blue-600 dark:text-blue-400">${(total).toFixed(2)}</span>
                     </div>
                 </div>
              </div>
