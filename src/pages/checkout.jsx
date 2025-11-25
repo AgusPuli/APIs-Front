@@ -2,10 +2,9 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { createOrder, resetOrderState } from "../store/slices/orderSlice";
-import { clearCart } from "../store/slices/cartSlice";
 import toast from "react-hot-toast";
 
-// Importamos tus componentes visuales desde la carpeta components
+// Componentes visuales
 import CheckoutSteps from "../components/Checkout/CheckoutSteps";
 import ShippingForm from "../components/Checkout/ShippingForm";
 import PaymentForm from "../components/Checkout/PaymentForm";
@@ -15,17 +14,17 @@ export default function Checkout() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  // 1. Redux: Datos del carrito, usuario y estado de la orden
+  // 1. Estado Global
   const { items, total, discount, discountCode } = useSelector((state) => state.cart);
-  const { token, authenticated, user } = useSelector((state) => state.user);
-  const { loading: orderLoading, success: orderSuccess, error: orderError } = useSelector((state) => state.order);
+  const { authenticated, user } = useSelector((state) => state.user);
+  const { loading: orderLoading } = useSelector((state) => state.orders || state.order); // Soporte para ambos nombres de slice
 
-  // 2. Estados locales para los formularios
+  // 2. Estados Locales
   const [step, setStep] = useState(1);
   
-  // Datos de envío (Pre-llenados con datos del usuario si existen)
+  // Datos de envío
   const [shippingData, setShippingData] = useState({
-    fullName: user ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : "",
+    fullName: user ? `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.name : "",
     email: user?.email || "",
     phone: "",
     address: "",
@@ -44,83 +43,94 @@ export default function Checkout() {
     saveCard: false,
   });
 
-  // 3. Validaciones al montar: Si no hay items o usuario, fuera.
+  // 3. Validaciones iniciales
   useEffect(() => {
-    if (items.length === 0 && !orderSuccess) {
-      toast("El carrito está vacío");
-      navigate("/cart");
-    }
     if (!authenticated) {
-      toast("Debes iniciar sesión para comprar");
+      toast.error("Debes iniciar sesión para comprar");
       navigate("/login");
+    } else if (items.length === 0) {
+      // Solo redirigir si NO estamos cargando una orden exitosa
+      toast("El carrito está vacío");
+      navigate("/products");
     }
-  }, [items, authenticated, navigate, orderSuccess]);
+  }, [items, authenticated, navigate]);
 
-  // 4. Efecto al completarse la orden exitosamente
+  // Limpiar estados al salir
   useEffect(() => {
-    if (orderSuccess) {
-      toast.success("¡Orden creada con éxito!");
-      dispatch(clearCart()); 
-      dispatch(resetOrderState()); 
-      navigate("/user"); // Redirigir a "Mis Pedidos"
-    }
-  }, [orderSuccess, dispatch, navigate]);
-
-  // 5. Efecto para errores de orden
-  useEffect(() => {
-    if (orderError) {
-      toast.error(`Error al procesar: ${orderError}`);
-    }
-  }, [orderError]);
+    return () => { dispatch(resetOrderState()); };
+  }, [dispatch]);
 
   // Navegación entre pasos
-  const nextStep = () => setStep((prev) => prev + 1);
+  const nextStep = () => {
+    // Validaciones simples antes de avanzar
+    if (step === 1) {
+        if(!shippingData.address || !shippingData.phone) return toast.error("Completa la dirección y teléfono");
+    }
+    if (step === 2) {
+        if(!paymentData.cardNumber || !paymentData.cvv) return toast.error("Completa los datos de pago");
+    }
+    setStep((prev) => prev + 1);
+  };
+  
   const prevStep = () => setStep((prev) => prev - 1);
 
-  // 6. Lógica Final: Confirmar Compra
-  const handleConfirmOrder = () => {
-    if (!token) {
-        toast.error("Debes iniciar sesión");
+  // 4. CONFIRMAR COMPRA
+  const handleConfirmOrder = async () => {
+    if (!user?.id) {
+        toast.error("Error de sesión. Vuelve a loguearte.");
         return;
     }
 
-    // ✅ Construcción del objeto Payload
+    // A. Preparar Payload de Orden
     const orderPayload = {
+        userId: user.id,
+        // Enviamos items limpios (solo IDs y cantidades)
         items: items.map(item => ({
-            // Usamos item.id (del frontend) o item.productId (del backend)
-            productId: item.id || item.productId,
+            productId: item.id || item.productId, // Maneja ambos casos por seguridad
             quantity: Number(item.quantity),
             price: Number(item.price)
         })),
         total: total - discount,
-        shippingAddress: shippingData,
+        shippingAddress: {
+            ...shippingData,
+            // Si tu backend espera un string en lugar de objeto, descomenta esto:
+            // address: `${shippingData.address}, ${shippingData.city}` 
+        },
         discountCode: discountCode || null
     };
 
-    // ✅ Objeto de pago
+    // B. Preparar Payload de Pago
     const paymentPayload = {
         paymentMethod: "CREDIT_CARD",
-        // Aquí podrías agregar más detalles del pago si tu backend lo requiere
+        cardDetails: { 
+            number: paymentData.cardNumber.replace(/\s/g, ""), // Limpiar espacios
+            holder: paymentData.cardHolder
+        }
     };
 
-    // ✅ Validación preventiva en el Frontend
-    if (orderPayload.items.some(i => !i.productId)) {
-        toast.error("Error: Hay productos sin ID válido en el carrito");
-        return;
-    }
+    try {
+        // C. Disparar Acción y esperar respuesta (unwrap maneja el throw si falla)
+        const result = await dispatch(createOrder({ 
+            orderData: orderPayload,
+            paymentData: paymentPayload 
+        })).unwrap();
 
-    // ✅ Despachar la acción con los objetos correctos
-    dispatch(createOrder({ 
-      orderData: orderPayload,
-      paymentData: paymentPayload 
-    }));
+        // D. Éxito
+        toast.success(`¡Orden #${result.id} creada con éxito!`);
+        navigate("/user"); // Redirigir a historial de órdenes
+
+    } catch (errMessage) {
+        // E. Error (Muestra el mensaje que viene del backend o del slice)
+        console.error("Error Checkout:", errMessage);
+        toast.error(typeof errMessage === 'string' ? errMessage : "Hubo un error al procesar el pedido");
+    }
   };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-10 px-4">
       <div className="max-w-6xl mx-auto">
         
-        {/* Barra de progreso */}
+        {/* Barra de Pasos */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Finalizar Compra</h1>
           <CheckoutSteps currentStep={step} />
@@ -128,8 +138,8 @@ export default function Checkout() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
-          {/* Columna Izquierda: Formularios Dinámicos */}
-          <div className="lg:col-span-2">
+          {/* Columna Izquierda: Formularios */}
+          <div className="lg:col-span-2 space-y-6">
             {step === 1 && (
               <ShippingForm
                 data={shippingData}
@@ -156,22 +166,25 @@ export default function Checkout() {
             )}
           </div>
 
-          {/* Columna Derecha: Resumen del Carrito */}
+          {/* Columna Derecha: Resumen Flotante */}
           <div className="hidden lg:block">
              <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm sticky top-24 border border-gray-200 dark:border-gray-700">
                 <h3 className="font-bold text-gray-900 dark:text-white mb-4 text-lg">Resumen del Pedido</h3>
-                <div className="space-y-3 mb-4 max-h-60 overflow-y-auto custom-scrollbar">
+                
+                {/* Lista compacta de items */}
+                <div className="space-y-3 mb-4 max-h-60 overflow-y-auto custom-scrollbar pr-2">
                   {items.map(item => (
                       <div key={item.id || item.productId} className="flex justify-between text-sm text-gray-600 dark:text-gray-300">
-                          <div className="flex gap-2">
-                             <span className="font-medium text-gray-900 dark:text-white">x{item.quantity}</span>
-                             <span className="truncate max-w-[150px]" title={item.name}>{item.name}</span>
+                          <div className="flex gap-2 items-start">
+                             <span className="font-medium text-gray-900 dark:text-white shrink-0">x{item.quantity}</span>
+                             <span className="truncate max-w-[140px] leading-tight" title={item.name}>{item.name}</span>
                           </div>
-                          <span>${(item.price * item.quantity).toFixed(2)}</span>
+                          <span className="shrink-0">${(item.price * item.quantity).toFixed(2)}</span>
                       </div>
                   ))}
                 </div>
                 
+                {/* Totales */}
                 <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-2">
                     <div className="flex justify-between text-gray-600 dark:text-gray-400">
                         <span>Subtotal</span>
@@ -183,9 +196,9 @@ export default function Checkout() {
                             <span>-${discount.toFixed(2)}</span>
                         </div>
                     )}
-                    <div className="flex justify-between font-bold text-lg text-gray-900 dark:text-white pt-2">
-                        <span>Total</span>
-                        <span>${(total - discount).toFixed(2)}</span>
+                    <div className="flex justify-between font-bold text-lg text-gray-900 dark:text-white pt-2 border-t border-dashed border-gray-200 dark:border-gray-700 mt-2">
+                        <span>Total a Pagar</span>
+                        <span className="text-blue-600 dark:text-blue-400">${(total - discount).toFixed(2)}</span>
                     </div>
                 </div>
              </div>

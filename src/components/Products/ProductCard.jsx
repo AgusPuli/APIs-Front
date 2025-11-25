@@ -21,7 +21,7 @@ function ProductCard({ product }) {
         e.preventDefault();
         e.stopPropagation();
         
-        // 🛑 1. VALIDACIÓN DE AUTENTICACIÓN (Requisito de la regla)
+        // 1. Validación de Autenticación
         if (!token) {
             toast.error("Debes iniciar sesión para agregar al carrito.");
             navigate("/login");
@@ -34,8 +34,8 @@ function ProductCard({ product }) {
             return;
         }
 
-        // 3. Validación de Stock Máximo
-        const existingItem = cartItems.find(item => item.id === product.id);
+        // 3. Validación de Stock Máximo (Local - Preventiva)
+        const existingItem = cartItems.find(item => item.id === product.id); // Ojo con el ID aquí (productId vs id)
         const currentQty = existingItem ? existingItem.quantity : 0;
         const maxStock = product.stock || 0;
 
@@ -44,13 +44,22 @@ function ProductCard({ product }) {
             return;
         }
 
-        // 4. Disparar acción con unwrap para manejar errores
+        // 4. Disparar acción al Backend
         try {
+            // Usamos unwrap() para que si falla, salte al catch
             await dispatch(addToCart({ productId: product.id, quantity: 1 })).unwrap();
             toast.success("Agregado al carrito");
-        } catch (error) {
-            console.error("Error al agregar producto:", error);
-            toast.error("Error: No se pudo conectar con el carrito.");
+        } catch (errMessage) {
+            // 🛑 CORRECCIÓN AQUÍ:
+            // 'errMessage' es el string que devolvió rejectWithValue(err.message) en el slice.
+            console.error("Error addToCart:", errMessage);
+            
+            // Mostramos el mensaje real si existe, o uno genérico si no
+            if (typeof errMessage === 'string' && errMessage.includes("stock")) {
+                 toast.error("Sin stock suficiente.");
+            } else {
+                 toast.error(errMessage || "Error al agregar al carrito.");
+            }
         }
     };
 

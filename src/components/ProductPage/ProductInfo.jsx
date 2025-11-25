@@ -1,119 +1,122 @@
 import { useState } from "react";
-import toast from "react-hot-toast";
-import { useSession } from "../Context/SessionContext";
-import { useCart } from "../Context/CartContext";
+import { useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { addToCart } from "../../store/slices/cartSlice";
 import { motion } from "framer-motion";
+import toast from "react-hot-toast";
 
-// canBuy es opcional; si no lo mandan, lo inferimos de product.active
+// canBuy es opcional; si no lo mandan, lo inferimos de product.active Y el stock
 export default function ProductInfo({ product, canBuy: canBuyProp }) {
+  // Estados locales para variantes
   const [selectedStorage, setSelectedStorage] = useState(product.storageOptions?.[0] || "");
   const [selectedColor, setSelectedColor] = useState(product.colors?.[0] || "");
-  const [loading, setLoading] = useState(false);
 
-  const { token } = useSession();
-  const { addItem, fetchCart, userId } = useCart();
+  // Hooks de Redux y Router
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  
+  // Leer estado global
+  const { token } = useSelector((state) => state.user);
+  const { loading } = useSelector((state) => state.cart);
 
-  // Acepta booleano o 0/1
+  // --- LÓGICA DE DISPONIBILIDAD CORREGIDA ---
+  const isActive = Boolean(product?.active);
+  const hasStock = product?.stock > 0;
+
+  // Determinar si se puede comprar: Debe estar activo Y tener stock
   const canBuy = typeof canBuyProp === "boolean"
     ? canBuyProp
-    : Boolean(product?.active);
+    : (isActive && hasStock);
 
   const handleAddToCart = async () => {
     if (!canBuy) {
-      toast.error("Este producto no está disponible actualmente");
+      if (!isActive) toast.error("Este producto no está disponible");
+      else if (!hasStock) toast.error("Producto sin stock");
       return;
     }
 
+    // 1. Validación de Autenticación con Redux
     if (!token) {
       toast.error("Debes iniciar sesión para añadir productos al carrito");
+      navigate("/login");
       return;
     }
 
-    if (!userId) {
-      toast.error("No se pudo identificar al usuario logueado");
-      return;
-    }
-
-    setLoading(true);
+    // 2. Disparar acción al Store
     try {
-      const payload = {
-        userId,
-        item: { productId: product.id, quantity: 1 },
-      };
+      await dispatch(addToCart({ 
+        productId: product.id, 
+        quantity: 1 
+      })).unwrap();
 
-      const res = await fetch("http://localhost:8080/carts/add", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(errorText || "Error al añadir producto al carrito");
-      }
-
-      addItem({
-        id: crypto.randomUUID(),
-        productId: product.id,
-        name: product.name,
-        price: product.price,
-        selectedColor,
-        selectedStorage,
-        quantity: 1,
-        imageUrl: product.images?.[0] || "",
-      });
-
-      await fetchCart();
-      toast.success(`Producto "${product.name}" añadido al carrito`);
+      toast.success("Producto agregado al carrito");
     } catch (err) {
-      console.error("Error al agregar producto:", err);
-      toast.error("No se pudo agregar el producto al carrito");
-    } finally {
-      setLoading(false);
+      console.error("Error al agregar:", err);
+      toast.error(typeof err === 'string' ? err : "Error al agregar al carrito");
     }
   };
 
   return (
-    <div className="flex flex-col gap-6 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-      <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-        {product.name}
-      </h1>
-      <p className="text-gray-600 dark:text-gray-300">{product.description}</p>
-      <p className="text-3xl font-bold text-primary">
-        ${Number(product.price || 0).toFixed(2)}
+    <div className="flex flex-col gap-6">
+      {/* Título y Precio */}
+      <div>
+        <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-2">
+          {product.name}
+        </h1>
+        <div className="flex items-center gap-4">
+          <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+            ${product.price?.toLocaleString("es-AR")}
+          </span>
+          
+          {/* --- ETIQUETAS DE ESTADO CORREGIDAS --- */}
+          {isActive && hasStock ? (
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+              Disponible
+            </span>
+          ) : isActive && !hasStock ? (
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400">
+              Sin Stock
+            </span>
+          ) : (
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+              No disponible
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Descripción */}
+      <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+        {product.description}
       </p>
 
-      {/* Selectores de almacenamiento */}
-      {product.storageOptions && (
+      {/* Selector de Almacenamiento (Si existe) */}
+      {product.storageOptions && product.storageOptions.length > 0 && (
         <div>
           <p className="font-medium mb-2 text-gray-800 dark:text-gray-200">
             Almacenamiento
           </p>
-          <div className="flex flex-wrap gap-2">
-            {product.storageOptions.map((s, idx) => (
-              <motion.button
-                key={`${s}-${idx}`}
-                onClick={() => setSelectedStorage(s)}
-                whileTap={{ scale: 0.95 }}
+          <div className="flex flex-wrap gap-3">
+            {product.storageOptions.map((opt) => (
+              <button
+                key={opt}
+                onClick={() => setSelectedStorage(opt)}
                 disabled={!canBuy}
-                className={`px-4 py-2 border rounded-lg font-medium transition-all ${
-                  selectedStorage === s
-                    ? "border-2 border-primary bg-primary/20 text-primary shadow-lg"
-                    : "border-gray-300 text-gray-700 dark:text-gray-200 hover:border-primary hover:shadow-sm"
+                className={`px-4 py-2 rounded-lg border transition-all ${
+                  selectedStorage === opt
+                    ? "border-blue-600 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-400"
+                    : "border-gray-300 text-gray-700 hover:border-gray-400 dark:border-gray-600 dark:text-gray-300"
                 } ${!canBuy ? "opacity-60 cursor-not-allowed" : ""}`}
               >
-                {s}
-              </motion.button>
+                {opt}
+              </button>
             ))}
           </div>
         </div>
       )}
 
-      {/* Selectores de color */}
-      {product.colors && (
+      {/* Selector de Color (Si existe) */}
+      {product.colors && product.colors.length > 0 && (
         <div>
           <p className="font-medium mb-2 text-gray-800 dark:text-gray-200">
             Color
@@ -127,10 +130,11 @@ export default function ProductInfo({ product, canBuy: canBuyProp }) {
                 disabled={!canBuy}
                 className={`w-10 h-10 rounded-full border-2 transition-all ${
                   selectedColor === c
-                    ? "border-4 border-primary shadow-lg"
-                    : "border-gray-300 hover:shadow-sm"
+                    ? "border-4 border-blue-500 shadow-lg"
+                    : "border-gray-300 hover:shadow-sm dark:border-gray-600"
                 } ${!canBuy ? "opacity-60 cursor-not-allowed" : ""}`}
                 style={{ backgroundColor: c }}
+                title={c}
               />
             ))}
           </div>
@@ -143,14 +147,32 @@ export default function ProductInfo({ product, canBuy: canBuyProp }) {
         whileHover={{ scale: canBuy && !loading ? 1.02 : 1 }}
         whileTap={{ scale: canBuy && !loading ? 0.98 : 1 }}
         disabled={loading || !canBuy}
-        className={`mt-4 w-full py-3 rounded-lg font-bold transition-all shadow-lg ${
+        className={`mt-4 w-full py-4 rounded-xl font-bold text-lg transition-all shadow-md hover:shadow-lg ${
           loading || !canBuy
-            ? "bg-gray-400 cursor-not-allowed text-white"
-            : "bg-primary text-white hover:bg-primary/90"
+            ? "bg-gray-300 dark:bg-gray-700 text-gray-500 cursor-not-allowed"
+            : "bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800"
         }`}
       >
-        {loading ? "Agregando..." : canBuy ? "Añadir al carrito" : "No disponible"}
+        {loading ? (
+          <span className="flex items-center justify-center gap-2">
+            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            Procesando...
+          </span>
+        ) : !isActive ? (
+          "No disponible"
+        ) : !hasStock ? (
+          "Sin Stock"
+        ) : (
+          "Agregar al Carrito"
+        )}
       </motion.button>
+      
+      {/* Stock info (Solo si hay stock bajo pero mayor a 0) */}
+      {hasStock && product.stock < 10 && (
+         <p className="text-sm text-orange-600 dark:text-orange-400 mt-2 text-center">
+            ¡Apurate! Solo quedan {product.stock} unidades.
+         </p>
+      )}
     </div>
   );
 }

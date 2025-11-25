@@ -3,7 +3,6 @@ import { clearCart } from "./cartSlice";
 
 const API_URL = "http://localhost:8080";
 
-// Helper para obtener headers con el token
 const getAuthHeaders = (getState) => {
   const state = getState();
   const token = state.user?.token || localStorage.getItem("token");
@@ -13,20 +12,18 @@ const getAuthHeaders = (getState) => {
   };
 };
 
-// 🧠 THUNK: CHECKOUT + PAGO
 export const createOrder = createAsyncThunk(
   "orders/createOrder",
-  // 1️⃣ CORRECCIÓN AQUÍ: Agregamos 'orderData' a los parámetros
   async ({ orderData, paymentData }, { rejectWithValue, getState, dispatch }) => {
     try {
       const headers = getAuthHeaders(getState);
 
-      console.log("📡 Enviando orden al backend:", orderData);
+      // --- PASO 1: CREAR ORDEN ---
+      console.log("📡 1. Enviando orden al backend:", orderData);
       
       const orderRes = await fetch(`${API_URL}/orders/checkout`, {
         method: "POST",
         headers: headers,
-        // 2️⃣ CORRECCIÓN AQUÍ: Enviamos el body con los datos
         body: JSON.stringify(orderData), 
       });
 
@@ -36,43 +33,66 @@ export const createOrder = createAsyncThunk(
       }
 
       const order = await orderRes.json();
-      console.log("✅ Orden creada con ID:", order.id);
+      console.log("✅ Orden creada con éxito. ID:", order.id);
 
-      // Paso 2: Procesar el Pago
+      // --- PASO 2: VERIFICACIÓN INTELIGENTE DE PAGO ---
+      
+      // Verificamos si el backend YA creó el pago automáticamente
+      // (Buscamos si existe order.payment, order.paymentId o si el estado ya no es PENDING)
+      const paymentAlreadyExists = order.payment || (order.status && order.status !== "PENDING");
+
+      if (paymentAlreadyExists) {
+          console.log("ℹ️ El backend ya generó el pago automáticamente. Saltando paso manual.");
+          dispatch(clearCart());
+          return order;
+      }
+
+      // Si no existe pago, procedemos a crearlo manualmente
       const paymentPayload = {
         orderId: order.id,
         amount: order.total, 
         method: paymentData.paymentMethod || "CREDIT_CARD",
-        status: "COMPLETED"
+        status: "COMPLETED" // Forzamos el estado completado si es tarjeta
       };
 
-      console.log("💸 Procesando pago...", paymentPayload);
+      console.log("💸 2. Procesando pago manual...", paymentPayload);
+      
       const paymentRes = await fetch(`${API_URL}/payments`, {
         method: "POST",
         headers: headers,
         body: JSON.stringify(paymentPayload),
       });
 
+      // --- MANEJO DE ERROR 409 (CONFLICTO) ---
       if (!paymentRes.ok) {
-        throw new Error("Orden creada, pero falló el registro del pago.");
+        // Si el error es 409, asumimos que el pago se creó milisegundos antes o por otra vía
+        if (paymentRes.status === 409) {
+            console.warn("⚠️ Detectado conflicto 409: El pago ya existía. Asumiendo éxito.");
+            dispatch(clearCart());
+            return order;
+        }
+
+        // Cualquier otro error real
+        const errorText = await paymentRes.text();
+        throw new Error(errorText || "Falló el registro del pago.");
       }
       
       const paymentResult = await paymentRes.json();
       console.log("💳 Pago exitoso:", paymentResult);
 
-      // Paso 3: Limpiar Carrito
+      // Paso 3: Limpiar Carrito tras éxito
       dispatch(clearCart());
 
       return order; 
 
     } catch (err) {
       console.error("❌ Error en Checkout:", err);
+      // Retornamos el mensaje para que la UI lo muestre
       return rejectWithValue(err.message);
     }
   }
 );
 
-// ... (El resto del slice se queda igual) ...
 const orderSlice = createSlice({
   name: "orders",
   initialState: {
@@ -100,10 +120,11 @@ const orderSlice = createSlice({
         state.loading = false;
         state.success = true;
         state.currentOrder = action.payload;
+        state.error = null;
       })
       .addCase(createOrder.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload;
+        state.error = action.payload || "Error desconocido en el checkout";
       });
   },
 });
