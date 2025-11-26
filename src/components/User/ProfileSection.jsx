@@ -1,4 +1,4 @@
-import { useSelector } from "react-redux"; // 👈 Redux
+import { useSelector } from "react-redux"; 
 
 export default function ProfileSection() {
   // Leer estado global
