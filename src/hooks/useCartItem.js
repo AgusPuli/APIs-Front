@@ -1,45 +1,46 @@
 // src/components/Cart/CartItem.jsx
-import { useDispatch } from "react-redux";
 import { FiTrash, FiMinus, FiPlus } from "react-icons/fi";
 import { Link } from "react-router-dom";
-import { updateQuantity, removeFromCart } from "../../store/slices/cartSlice";
+import useCartItem from "../../hooks/useCartItem";
 import { getProductImageUrl, handleImageError } from "../../utils/imageUtils";
 
+/**
+ * Componente "tonto" de item del carrito
+ * Toda la lógica manejada por useCartItem hook
+ */
 export default function CartItem({ item }) {
-  const dispatch = useDispatch();
+  // ✅ Hook maneja toda la lógica del item
+  const {
+    productId,
+    stock,
+    totalPrice,
+    canIncrease,
+    canDecrease,
+    hasStock,
+    lowStock,
+    increase,
+    decrease,
+    remove
+  } = useCartItem(item);
 
-  // Extraer productId de manera segura
-  const productId = item.product?.id || item.productId;
+  // Si no hay productId válido, no renderizar
+  if (!productId) return null;
 
-  // Si no hay productId, no renderizar
-  if (!productId) {
-    console.error("❌ Item sin Product ID:", item);
-    return null;
-  }
-
-  const productStock = item.stock || item.product?.stock || 0;
-  const canIncrement = item.quantity < productStock;
-
-  const handleDecrease = () => {
-    if (item.quantity <= 1) return;
-    dispatch(updateQuantity({ productId, quantity: item.quantity - 1 }));
-  };
-
-  const handleIncrease = () => {
-    if (!canIncrement) return;
-    dispatch(updateQuantity({ productId, quantity: item.quantity + 1 }));
-  };
-
-  const handleDelete = () => {
-    if (window.confirm(`¿Eliminar ${item.name}?`)) {
-      dispatch(removeFromCart(productId));
-    }
-  };
-
-  const totalPrice = item.price * item.quantity;
-  
   // ✅ Utilidad maneja la URL de imagen
   const imageSrc = getProductImageUrl(productId);
+
+  // Determinar mensaje de stock
+  const getStockMessage = () => {
+    if (!hasStock) return "Sin stock";
+    if (lowStock) return `Quedan ${stock}`;
+    return "En stock";
+  };
+
+  const getStockColor = () => {
+    if (!hasStock) return "text-red-600";
+    if (lowStock) return "text-orange-600";
+    return "text-green-600";
+  };
 
   return (
     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 sm:p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors border-b border-gray-100 dark:border-gray-700">
@@ -69,8 +70,8 @@ export default function CartItem({ item }) {
         </p>
         
         {/* Stock Status */}
-        <p className={`text-xs font-medium mb-3 ${productStock > 0 ? "text-green-600" : "text-red-600"}`}>
-          {productStock > 10 ? "En stock" : productStock > 0 ? `Quedan ${productStock}` : "Sin stock"}
+        <p className={`text-xs font-medium mb-3 ${getStockColor()}`}>
+          {getStockMessage()}
         </p>
 
         {/* Controles de Cantidad */}
@@ -78,21 +79,23 @@ export default function CartItem({ item }) {
           {/* Botones +/- */}
           <div className="flex items-center border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
             <button
-              onClick={handleDecrease}
-              disabled={item.quantity <= 1}
+              onClick={decrease}
+              disabled={!canDecrease}
               className="px-3 py-2 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              aria-label="Disminuir cantidad"
             >
               <FiMinus size={16} />
             </button>
             
-            <span className="px-4 py-2 font-medium min-w-[3rem] text-center">
+            <span className="px-4 py-2 font-medium min-w-[3rem] text-center text-gray-900 dark:text-white">
               {item.quantity}
             </span>
             
             <button
-              onClick={handleIncrease}
-              disabled={!canIncrement}
+              onClick={increase}
+              disabled={!canIncrease}
               className="px-3 py-2 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              aria-label="Aumentar cantidad"
             >
               <FiPlus size={16} />
             </button>
@@ -100,8 +103,9 @@ export default function CartItem({ item }) {
 
           {/* Botón Eliminar */}
           <button
-            onClick={handleDelete}
+            onClick={remove}
             className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+            aria-label="Eliminar producto"
           >
             <FiTrash size={20} />
           </button>

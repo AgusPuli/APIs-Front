@@ -1,59 +1,55 @@
+// src/components/ProductPage/ProductInfo.jsx
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
-import { addToCart } from "../../store/slices/cartSlice";
 import { motion } from "framer-motion";
-import toast from "react-hot-toast";
+import useAddToCart from "../../hooks/useAddToCart";
 
-// canBuy es opcional; si no lo mandan, lo inferimos de product.active Y el stock
+/**
+ * Componente de información del producto
+ * Lógica de addToCart manejada por hook
+ */
 export default function ProductInfo({ product, canBuy: canBuyProp }) {
-  // Estados locales para variantes
+  // ✅ Hook maneja toda la lógica de agregar al carrito
+  const { addToCart, isAdmin } = useAddToCart();
+  
+  // Estados locales para variantes del producto
   const [selectedStorage, setSelectedStorage] = useState(product.storageOptions?.[0] || "");
   const [selectedColor, setSelectedColor] = useState(product.colors?.[0] || "");
 
-  // Hooks de Redux y Router
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
-  
-  // Leer estado global
-  const { token } = useSelector((state) => state.user);
-  const { loading } = useSelector((state) => state.cart);
-
-  // --- LÓGICA DE DISPONIBILIDAD CORREGIDA ---
+  // Estados del producto
   const isActive = Boolean(product?.active);
   const hasStock = product?.stock > 0;
-
-  // Determinar si se puede comprar: Debe estar activo Y tener stock
+  
+  // Determinar si se puede comprar
   const canBuy = typeof canBuyProp === "boolean"
     ? canBuyProp
     : (isActive && hasStock);
 
+  // ✅ Handler simplificado - el hook maneja todo
   const handleAddToCart = async () => {
-    if (!canBuy) {
-      if (!isActive) toast.error("Este producto no está disponible");
-      else if (!hasStock) toast.error("Producto sin stock");
-      return;
-    }
+    await addToCart(product, 1);
+  };
 
-    // 1. Validación de Autenticación con Redux
-    if (!token) {
-      toast.error("Debes iniciar sesión para añadir productos al carrito");
-      navigate("/login");
-      return;
+  // Determinar badge de disponibilidad
+  const getAvailabilityBadge = () => {
+    if (isActive && hasStock) {
+      return (
+        <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+          Disponible
+        </span>
+      );
     }
-
-    // 2. Disparar acción al Store
-    try {
-      await dispatch(addToCart({ 
-        productId: product.id, 
-        quantity: 1 
-      })).unwrap();
-
-      toast.success("Producto agregado al carrito");
-    } catch (err) {
-      console.error("Error al agregar:", err);
-      toast.error(typeof err === 'string' ? err : "Error al agregar al carrito");
+    if (isActive && !hasStock) {
+      return (
+        <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400">
+          Sin Stock
+        </span>
+      );
     }
+    return (
+      <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+        No disponible
+      </span>
+    );
   };
 
   return (
@@ -67,21 +63,7 @@ export default function ProductInfo({ product, canBuy: canBuyProp }) {
           <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
             ${product.price?.toLocaleString("es-AR")}
           </span>
-          
-          {/* --- ETIQUETAS DE ESTADO CORREGIDAS --- */}
-          {isActive && hasStock ? (
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-              Disponible
-            </span>
-          ) : isActive && !hasStock ? (
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400">
-              Sin Stock
-            </span>
-          ) : (
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
-              No disponible
-            </span>
-          )}
+          {getAvailabilityBadge()}
         </div>
       </div>
 
@@ -90,7 +72,7 @@ export default function ProductInfo({ product, canBuy: canBuyProp }) {
         {product.description}
       </p>
 
-      {/* Selector de Almacenamiento (Si existe) */}
+      {/* Selector de Almacenamiento */}
       {product.storageOptions && product.storageOptions.length > 0 && (
         <div>
           <p className="font-medium mb-2 text-gray-800 dark:text-gray-200">
@@ -101,12 +83,11 @@ export default function ProductInfo({ product, canBuy: canBuyProp }) {
               <button
                 key={opt}
                 onClick={() => setSelectedStorage(opt)}
-                disabled={!canBuy}
-                className={`px-4 py-2 rounded-lg border transition-all ${
+                className={`px-4 py-2 rounded-lg border-2 transition-all ${
                   selectedStorage === opt
-                    ? "border-blue-600 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-400"
-                    : "border-gray-300 text-gray-700 hover:border-gray-400 dark:border-gray-600 dark:text-gray-300"
-                } ${!canBuy ? "opacity-60 cursor-not-allowed" : ""}`}
+                    ? "border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+                    : "border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500"
+                }`}
               >
                 {opt}
               </button>
@@ -115,64 +96,78 @@ export default function ProductInfo({ product, canBuy: canBuyProp }) {
         </div>
       )}
 
-      {/* Selector de Color (Si existe) */}
+      {/* Selector de Color */}
       {product.colors && product.colors.length > 0 && (
         <div>
           <p className="font-medium mb-2 text-gray-800 dark:text-gray-200">
             Color
           </p>
-          <div className="flex gap-3">
-            {product.colors.map((c, idx) => (
-              <motion.button
-                key={`${c}-${idx}`}
-                onClick={() => setSelectedColor(c)}
-                whileTap={{ scale: 0.9 }}
-                disabled={!canBuy}
-                className={`w-10 h-10 rounded-full border-2 transition-all ${
-                  selectedColor === c
-                    ? "border-4 border-blue-500 shadow-lg"
-                    : "border-gray-300 hover:shadow-sm dark:border-gray-600"
-                } ${!canBuy ? "opacity-60 cursor-not-allowed" : ""}`}
-                style={{ backgroundColor: c }}
-                title={c}
-              />
+          <div className="flex flex-wrap gap-3">
+            {product.colors.map((color) => (
+              <button
+                key={color}
+                onClick={() => setSelectedColor(color)}
+                className={`px-4 py-2 rounded-lg border-2 transition-all capitalize ${
+                  selectedColor === color
+                    ? "border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+                    : "border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500"
+                }`}
+              >
+                {color}
+              </button>
             ))}
           </div>
         </div>
       )}
 
-      {/* Botón añadir al carrito */}
+      {/* Stock Info */}
+      <div className="text-sm text-gray-600 dark:text-gray-400">
+        Stock disponible: <span className="font-semibold">{product.stock || 0}</span> unidades
+      </div>
+
+      {/* Botón Agregar al Carrito */}
       <motion.button
         onClick={handleAddToCart}
-        whileHover={{ scale: canBuy && !loading ? 1.02 : 1 }}
-        whileTap={{ scale: canBuy && !loading ? 0.98 : 1 }}
-        disabled={loading || !canBuy}
-        className={`mt-4 w-full py-4 rounded-xl font-bold text-lg transition-all shadow-md hover:shadow-lg ${
-          loading || !canBuy
-            ? "bg-gray-300 dark:bg-gray-700 text-gray-500 cursor-not-allowed"
-            : "bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800"
+        disabled={!canBuy || isAdmin}
+        whileHover={canBuy && !isAdmin ? { scale: 1.02 } : {}}
+        whileTap={canBuy && !isAdmin ? { scale: 0.98 } : {}}
+        className={`w-full py-3.5 rounded-xl font-bold text-lg transition-all shadow-lg ${
+          canBuy && !isAdmin
+            ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 hover:shadow-xl"
+            : "bg-gray-300 dark:bg-gray-600 text-gray-500 cursor-not-allowed"
         }`}
       >
-        {loading ? (
-          <span className="flex items-center justify-center gap-2">
-            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            Procesando...
-          </span>
-        ) : !isActive ? (
-          "No disponible"
-        ) : !hasStock ? (
-          "Sin Stock"
-        ) : (
-          "Agregar al Carrito"
-        )}
+        {isAdmin 
+          ? "Admin - No disponible" 
+          : !isActive 
+            ? "Producto no disponible" 
+            : !hasStock 
+              ? "Sin stock" 
+              : "Agregar al carrito"
+        }
       </motion.button>
-      
-      {/* Stock info (Solo si hay stock bajo pero mayor a 0) */}
-      {hasStock && product.stock < 10 && (
-         <p className="text-sm text-orange-600 dark:text-orange-400 mt-2 text-center">
-            ¡Apurate! Solo quedan {product.stock} unidades.
-         </p>
-      )}
+
+      {/* Información Adicional */}
+      <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex items-center gap-2">
+          <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          <span>Envío gratis en compras mayores a $50.000</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>Garantía oficial del fabricante</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <svg className="w-5 h-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+          </svg>
+          <span>Pago seguro - Todas las tarjetas</span>
+        </div>
+      </div>
     </div>
   );
 }
