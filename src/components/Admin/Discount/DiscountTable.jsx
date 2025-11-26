@@ -1,10 +1,22 @@
 // src/components/Admin/Discount/DiscountTable.jsx
+import { useSelector } from "react-redux";
 import DiscountRow from "./DiscountRow";
 
-export default function DiscountTable({ discounts = [] }) {
-    if (!discounts.length) {
+export default function DiscountTable() {
+    // ✅ Obtener datos directamente de Redux
+    const { list: discounts, loading } = useSelector((state) => state.discounts);
+
+    if (loading) {
         return (
-            <div className="p-6 rounded-xl bg-white dark:bg-gray-800 shadow text-gray-500 text-center">
+            <div className="p-6 rounded-xl bg-white dark:bg-gray-800 shadow text-center">
+                <div className="animate-pulse">Cargando cupones...</div>
+            </div>
+        );
+    }
+
+    if (!discounts || discounts.length === 0) {
+        return (
+            <div className="p-6 rounded-xl bg-white dark:bg-gray-800 shadow text-gray-500 dark:text-gray-400 text-center">
                 No hay cupones registrados.
             </div>
         );
@@ -14,18 +26,18 @@ export default function DiscountTable({ discounts = [] }) {
         <div className="overflow-x-auto bg-white dark:bg-gray-800 rounded-xl shadow">
             <table className="min-w-full text-sm text-left text-gray-500 dark:text-gray-300">
                 <thead className="text-xs uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-                <tr>
-                    <th className="px-6 py-3">Código</th>
-                    <th className="px-6 py-3">Descuento (%)</th>
-                    <th className="px-6 py-3">Activo</th>
-                    <th className="px-6 py-3">Inicio</th>
-                    <th className="px-6 py-3">Fin</th>
-                </tr>
+                    <tr>
+                        <th className="px-6 py-3">Código</th>
+                        <th className="px-6 py-3">Descuento (%)</th>
+                        <th className="px-6 py-3">Activo</th>
+                        <th className="px-6 py-3">Inicio</th>
+                        <th className="px-6 py-3">Fin</th>
+                    </tr>
                 </thead>
                 <tbody>
-                {discounts.map((d) => (
-                    <DiscountRow key={d.id || d.code} discount={d} />
-                ))}
+                    {discounts.map((d) => (
+                        <DiscountRow key={d.id || d.code} discount={d} />
+                    ))}
                 </tbody>
             </table>
         </div>

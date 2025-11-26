@@ -39,20 +39,15 @@ export default function DiscountSection() {
                 </button>
             </div>
 
-            {/* Estados */}
-            {loading && (
-                <div className="p-6 rounded-xl bg-white dark:bg-gray-800 shadow">
-                    Cargando...
-                </div>
-            )}
+            {/* Error */}
             {error && (
                 <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800">
                     {error}
                 </div>
             )}
 
-            {/* Tabla */}
-            {!loading && !error && <DiscountTable discounts={discounts} />}
+            {/* Tabla - SIN PROPS, usa Redux internamente */}
+            <DiscountTable />
 
             {/* Modal crear */}
             {showCreate && (

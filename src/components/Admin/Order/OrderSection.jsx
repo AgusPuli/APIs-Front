@@ -6,11 +6,12 @@ import ViewOrderModal from "./ViewOrderModal";
 
 export default function OrderSection() {
   const dispatch = useDispatch();
-  const { list: orders, loading } = useSelector((state) => state.orders);
+  
+  // ✅ Solo necesitamos loading, orders viene de OrderTable
+  const { loading } = useSelector((state) => state.orders);
   const [selectedOrder, setSelectedOrder] = useState(null);
 
   useEffect(() => {
-    // Admin carga TODAS las órdenes
     dispatch(fetchAllOrders());
   }, [dispatch]);
 
@@ -42,33 +43,14 @@ export default function OrderSection() {
         </button>
       </div>
 
-      {loading ? (
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Cargando pedidos...</p>
-        </div>
-      ) : orders.length === 0 ? (
-        <div className="text-center py-16 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-          <svg className="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-          </svg>
-          <p className="text-gray-500 dark:text-gray-400 text-lg">
-            No hay pedidos registrados
-          </p>
-        </div>
-      ) : (
-        <OrderTable 
-          orders={orders} 
-          onView={(order) => setSelectedOrder(order)} 
-        />
-      )}
+      {/* Tabla - SIN PROP orders, usa Redux internamente */}
+      <OrderTable onView={(order) => setSelectedOrder(order)} />
 
       {selectedOrder && (
         <ViewOrderModal
           orderId={selectedOrder.id}
           onClose={() => {
             setSelectedOrder(null);
-            // Refrescar órdenes después de cerrar el modal
             dispatch(fetchAllOrders());
           }}
         />

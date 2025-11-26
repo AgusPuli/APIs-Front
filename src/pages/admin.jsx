@@ -22,7 +22,7 @@ export default function Admin() {
         return <CategorySection />;
       case "orders":
         return <OrderSection />;
-      case "discounts":            // ← el Sidebar debe llamar setSection("discounts")
+      case "discounts":            
         return <DiscountSection />;
       case "settings":
         return <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-sm">

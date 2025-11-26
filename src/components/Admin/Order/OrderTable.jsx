@@ -1,6 +1,18 @@
+import { useSelector } from "react-redux";
 import OrderRow from "./OrderRow";
 
-export default function OrderTable({ orders, onView }) {
+export default function OrderTable({ onView }) {
+  // ✅ Obtener órdenes directamente de Redux
+  const { list: orders, loading } = useSelector((state) => state.orders);
+
+  if (loading) {
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-12 text-center border border-gray-200 dark:border-gray-700">
+        <div className="animate-pulse">Cargando pedidos...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700">
       <div className="overflow-x-auto">
@@ -17,9 +29,9 @@ export default function OrderTable({ orders, onView }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-            {orders.length > 0 ? (
+            {orders && orders.length > 0 ? (
               orders.map((order) => (
-                <OrderRow key={order.id} order={order} onView={() => onView(order)} />
+                <OrderRow key={order.id} order={order} onView={() => onView?.(order)} />
               ))
             ) : (
               <tr>

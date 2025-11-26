@@ -6,20 +6,20 @@ import CreateProductModal from "./ProductModal/ProductCreateModal";
 import EditProductModal from "./ProductModal/EditProductModal";
 import ToggleActiveModal from "./ProductModal/ToggleActiveModal";
 import { FiPlus } from "react-icons/fi";
-import toast from "react-hot-toast"; // Usamos toast en lugar de alert para mejor UX
+import toast from "react-hot-toast";
 
 export default function ProductSection() {
   const dispatch = useDispatch();
 
-  // Redux state
-  const { list: products, loading, error } = useSelector((state) => state.products);
+  // ✅ Redux state
+  const { loading, error } = useSelector((state) => state.products);
 
   // Modals
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editProduct, setEditProduct] = useState(null);
   const [toggleTarget, setToggleTarget] = useState(null);
 
-  // Cargar productos al iniciar (Ya no pasamos token, el Thunk lo busca solo)
+  // Cargar productos al iniciar
   useEffect(() => {
     dispatch(fetchProducts());
   }, [dispatch]);
@@ -27,7 +27,6 @@ export default function ProductSection() {
   // Callback para creación exitosa
   const handleProductCreated = () => {
     setShowCreateModal(false);
-    // Recargamos la lista para ver el nuevo producto
     dispatch(fetchProducts());
     toast.success("Producto creado exitosamente");
   };
@@ -49,22 +48,15 @@ export default function ProductSection() {
     if (!toggleTarget) return;
 
     const { product, nextActive } = toggleTarget;
-
-    // Ya no pasamos token
-    dispatch(toggleProductActive({
-        productId: product.id,
-        active: nextActive
-    }))
+    dispatch(toggleProductActive({ productId: product.id, active: nextActive }))
       .unwrap()
       .then(() => {
+        toast.success(`Producto ${nextActive ? "activado" : "desactivado"}`);
         setToggleTarget(null);
-        toast.success(nextActive ? "Producto habilitado" : "Producto deshabilitado");
-        // Actualizamos la lista para reflejar cambios visuales si es necesario
         dispatch(fetchProducts());
       })
       .catch((err) => {
-        console.error("Error toggle:", err);
-        toast.error("No se pudo cambiar el estado");
+        toast.error(`Error: ${err}`);
       });
   };
 
@@ -84,26 +76,23 @@ export default function ProductSection() {
         </button>
       </div>
 
-      {/* Contenido */}
-      {loading ? (
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Cargando productos...</p>
+      {/* Error */}
+      {error && (
+        <div className="mb-4 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800">
+          <p>Error: {typeof error === 'object' ? JSON.stringify(error) : error}</p>
+          <button onClick={() => dispatch(fetchProducts())} className="mt-2 text-blue-600 dark:text-blue-400 underline">
+            Reintentar
+          </button>
         </div>
-      ) : error ? (
-        <div className="text-center text-red-500 py-10">
-            <p>Error: {typeof error === 'object' ? JSON.stringify(error) : error}</p>
-            <button onClick={() => dispatch(fetchProducts())} className="mt-4 text-blue-600 underline">Reintentar</button>
-        </div>
-      ) : (
-        <ProductTable
-          products={products}
-          onEdit={(p) => setEditProduct(p)}
-          onToggle={(p, nextActive) => openToggleModal(p, nextActive)}
-        />
       )}
 
-      {/* Modales sin token */}
+      {/* Tabla - SIN PROP products, usa Redux internamente */}
+      <ProductTable
+        onEdit={(p) => setEditProduct(p)}
+        onToggle={(p, nextActive) => openToggleModal(p, nextActive)}
+      />
+
+      {/* Modales */}
       {showCreateModal && (
         <CreateProductModal
           onClose={() => setShowCreateModal(false)}
