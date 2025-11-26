@@ -67,7 +67,7 @@ export default function ProductPage() {
             {/* Banner Admin */}
             {isAdmin && (
                 <div className="bg-gray-800 text-white text-center py-3 px-4 text-sm font-medium sticky top-0 z-10">
-                    ðŸ”’ Modo Administrador: Vista de solo lectura
+                    Modo Administrador: Vista de solo lectura
                 </div>
             )}
 
@@ -75,7 +75,7 @@ export default function ProductPage() {
             {!product.active && !isAdmin && (
                 <div className="container mx-auto px-4 pt-6">
                     <div className="bg-yellow-100 text-yellow-800 p-3 rounded-lg border border-yellow-200 text-center">
-                        Este producto no estÃ¡ disponible actualmente.
+                        Este producto no está disponible actualmente.
                     </div>
                 </div>
             )}
@@ -98,7 +98,7 @@ export default function ProductPage() {
 
                     {/* Info */}
                     <div className="lg:w-1/2 flex flex-col gap-6">
-                        {/* El componente ProductInfo maneja su propia lÃ³gica de compra */}
+                        {/* El componente ProductInfo maneja su propia lógica de compra */}
                         <ProductInfo product={product} />
 
                         <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
