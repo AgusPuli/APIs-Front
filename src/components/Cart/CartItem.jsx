@@ -38,7 +38,7 @@ export default function CartItem({ item }) {
 
   const totalPrice = item.price * item.quantity;
   
-  // ✅ Utilidad maneja la URL de imagen
+
   const imageSrc = getProductImageUrl(productId);
 
   return (

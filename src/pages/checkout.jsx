@@ -44,7 +44,6 @@ export default function Checkout() {
     paymentMethod: "CREDIT_CARD",
   });
 
-  // ✅ VALIDACIÓN: Verificar que hay items en el carrito
   useEffect(() => {
     if (!authenticated) {
       toast.error("Debes iniciar sesión para continuar");
@@ -121,7 +120,6 @@ export default function Checkout() {
     if (step > 1) setStep(step - 1);
   };
 
-  // ✅ SUBMIT CORREGIDO con validaciones
   const handleSubmitOrder = async () => {
     // Validaciones finales
     if (!user || !user.id) {
@@ -130,7 +128,6 @@ export default function Checkout() {
       return;
     }
 
-    // ✅ Validar que items existe y no está vacío
     if (!items || !Array.isArray(items) || items.length === 0) {
       toast.error("Tu carrito está vacío");
       navigate("/cart");
@@ -146,7 +143,6 @@ export default function Checkout() {
       // A. Preparar Payload de Orden
       const orderPayload = {
         userId: user.id,
-        // ✅ Mapear items con validación
         items: items.map(item => {
           const productId = item.product?.id || item.productId || item.id;
           
@@ -221,7 +217,6 @@ export default function Checkout() {
     }
   };
 
-  // ✅ Si no hay items, mostrar mensaje
   if (!items || items.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">

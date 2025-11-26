@@ -11,14 +11,14 @@ import ProductFilters from "../Products/ProductsFilters";
 export default function MobileMenu({
   isOpen,
   setOpen,
-  // Props de filtrado (se mantienen por ahora)
+
   searchQuery,
   setSearchQuery,
   selectedCategory,
   setSelectedCategory,
   selectedSubcategory,
   setSelectedSubcategory,
-  products, // Lista de productos para los filtros
+  products,
   pathname,
 }) {
   const dispatch = useDispatch();

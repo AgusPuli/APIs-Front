@@ -1,9 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../../config/axiosConfig";
 
-// ============================================================
-// ASYNC THUNKS (SIN TRY-CATCH)
-// ============================================================
 
 export const fetchProducts = createAsyncThunk(
   "products/fetchProducts",
@@ -116,9 +113,6 @@ export const deleteProduct = createAsyncThunk(
   }
 );
 
-// ============================================================
-// SLICE
-// ============================================================
 
 const productSlice = createSlice({
   name: "products",

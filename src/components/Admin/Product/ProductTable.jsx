@@ -3,7 +3,7 @@ import { useSelector } from "react-redux";
 import ProductRow from "./ProductRow";
 
 export default function ProductTable({ onEdit, onToggle }) {
-  // ✅ Obtener productos directamente de Redux
+
   const { list: products, loading } = useSelector((state) => state.products);
 
   if (loading) {

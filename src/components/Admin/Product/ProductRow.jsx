@@ -5,7 +5,7 @@ import ProductStatusBadge from "./ProductStatusBadge";
 export default function ProductRow({ product, onEdit, onToggle = () => {} }) {
   const isActive = !!product.active;
 
-  // Llamada segura; si alguien no pasó onToggle, no rompe
+  // Llamada segura si alguien no pasó onToggle no rompe
   const handleDisable = () => onToggle?.(product, false);
   const handleEnable = () => onToggle?.(product, true);
 

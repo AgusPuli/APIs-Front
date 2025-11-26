@@ -7,7 +7,7 @@ export default function UserProfileButton() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   
-  // Leer estado de usuario desde Redux
+
   const { user, authenticated } = useSelector((state) => state.user);
   
   const [isOpen, setIsOpen] = useState(false);
@@ -26,7 +26,7 @@ export default function UserProfileButton() {
   const handleDashboardClick = () => {
     if (!user) return;
 
-    // Verificamos el rol que viene en el objeto user de Redux
+
     if (user.role === "ADMIN") {
       navigate("/admin");
     } else {

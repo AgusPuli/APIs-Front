@@ -4,7 +4,7 @@ import { FiShoppingBag } from "react-icons/fi";
 import CartItem from "./CartItem";
 
 export default function CartList() {
-  // Leemos los items directamente de Redux
+
   const { items } = useSelector((state) => state.cart);
 
   if (!items || items.length === 0) {
@@ -37,7 +37,6 @@ export default function CartList() {
       </h2>
       <div className="space-y-4">
         {items.map((item) => (
-          // Usamos una key única y pasamos el item al componente hijo
           <CartItem 
             key={item.id || item.productId || Math.random()} 
             item={item} 

@@ -9,7 +9,7 @@ import toast from "react-hot-toast";
 export default function CategorySection() {
   const dispatch = useDispatch();
   
-  // ✅ Redux state
+
   const { loading, error } = useSelector((state) => state.categories);
   
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -59,7 +59,7 @@ export default function CategorySection() {
         </div>
       )}
 
-      {/* Tabla - SIN PROPS, usa Redux internamente */}
+
       <CategoryTable />
 
       {/* Modal Crear */}

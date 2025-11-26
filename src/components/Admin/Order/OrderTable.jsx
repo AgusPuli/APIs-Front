@@ -2,7 +2,7 @@ import { useSelector } from "react-redux";
 import OrderRow from "./OrderRow";
 
 export default function OrderTable({ onView }) {
-  // ✅ Obtener órdenes directamente de Redux
+
   const { list: orders, loading } = useSelector((state) => state.orders);
 
   if (loading) {

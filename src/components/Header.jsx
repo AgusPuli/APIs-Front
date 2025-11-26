@@ -25,7 +25,7 @@ export default function Header({
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const showSearch = pathname === "/products";
 
-  // ✅ Obtener del store de Redux
+
   const { user, authenticated, loading } = useSelector((state) => state.user);
 
   // Normaliza el rol para soportar "ADMIN" o "ROLE_ADMIN"

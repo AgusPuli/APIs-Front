@@ -3,7 +3,6 @@ import { FiShoppingCart } from "react-icons/fi";
 import { useSelector } from "react-redux"; 
 
 export default function CartButton() {
-  // Lee el carrito desde el Store global
   const { items } = useSelector((state) => state.cart);
 
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);

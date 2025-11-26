@@ -6,18 +6,15 @@ import { useSelector } from "react-redux";
 import useAddToCart from "../../hooks/useAddToCart";
 import { getProductImageUrl, handleImageError } from "../../utils/imageUtils";
 
-/**
- * Componente "tonto" para mostrar una tarjeta de producto
- * Toda la lógica está en hooks y utils
- */
+
 function ProductCard({ product }) {
-  // ✅ Hook maneja toda la lógica de agregar al carrito
+
   const { addToCart, isAdmin } = useAddToCart();
   
   // Solo necesitamos saber si el usuario está autenticado para mostrar estados
   const { user } = useSelector((state) => state.user);
 
-  // ✅ Utilidad maneja la URL de imagen
+
   const imageUrl = getProductImageUrl(product.id);
 
   // Estados del producto

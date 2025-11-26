@@ -22,7 +22,7 @@ export default function OrderRow({ order, onView }) {
     SHIPPED: "Enviado",
   };
 
-  // Datos del cliente (puede venir en order.user o directamente en order)
+
   const customerName = order.user 
     ? `${order.user.firstName || ''} ${order.user.lastName || ''}`.trim() 
     : order.customer || "Cliente";

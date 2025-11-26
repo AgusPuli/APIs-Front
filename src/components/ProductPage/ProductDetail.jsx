@@ -5,12 +5,12 @@ import { fetchProductById } from "../../../store/slices/productSlice";
 export default function ProductDetailContainer({ productId, children }) {
   const dispatch = useDispatch();
 
-  // Obtenemos datos desde Redux
+
   const product = useSelector((state) => state.products.selected);
   const loading = useSelector((state) => state.products.loadingSelected);
   const error = useSelector((state) => state.products.error);
 
-  // Cargar producto cuando cambia productId
+
   useEffect(() => {
     if (productId) {
       dispatch(fetchProductById(productId));

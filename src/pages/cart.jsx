@@ -19,21 +19,19 @@ export default function Cart() {
   const { items, loading, total, discount, discountCode, error } = useSelector((state) => state.cart);
   const { authenticated, token } = useSelector((state) => state.user);
 
-  // 🔄 CARGAR CARRITO AL MONTAR EL COMPONENTE
+
   useEffect(() => {
     if (authenticated && token) {
       dispatch(fetchCart());
     }
   }, [authenticated, token, dispatch]);
 
-  // ⚠️ MOSTRAR ERRORES
   useEffect(() => {
     if (error) {
       toast.error(error);
     }
   }, [error]);
 
-  // 🗑️ LIMPIAR CARRITO
   const handleClearCart = () => {
     if(window.confirm("¿Estás seguro de vaciar el carrito?")) {
       dispatch(clearCart())

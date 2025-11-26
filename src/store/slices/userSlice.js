@@ -19,9 +19,7 @@ function parseJwt(token) {
   }
 }
 
-// ============================================================
-// ASYNC THUNKS (SIN TRY-CATCH)
-// ============================================================
+
 
 export const loginUser = createAsyncThunk(
   "user/login",
@@ -69,9 +67,6 @@ export const updateUserProfile = createAsyncThunk(
   }
 );
 
-// ============================================================
-// SLICE
-// ============================================================
 
 const initialState = {
   token: null,

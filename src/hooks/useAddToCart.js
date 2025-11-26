@@ -4,10 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { addToCart } from "../store/slices/cartSlice";
 import toast from "react-hot-toast";
 
-/**
- * Custom hook para manejar agregar al carrito
- * Usa Redux matcher para manejar success/error (sin try-catch)
- */
+
 export default function useAddToCart() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -17,12 +14,9 @@ export default function useAddToCart() {
 
   const isAdmin = user?.role === "ADMIN";
 
-  /**
-   * Agregar producto al carrito
-   * El thunk maneja el error, aquí solo validamos UI
-   */
+
   const addToCartHandler = async (product, quantity = 1) => {
-    // ✅ Validaciones de UI (antes de dispatch)
+
     if (!token) {
       toast.error("Debes iniciar sesión para agregar al carrito");
       navigate("/login");

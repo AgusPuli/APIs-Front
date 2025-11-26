@@ -24,7 +24,7 @@ export default function RegisterForm() {
     }
 
     try {
-      // 1️⃣ Registrar usuario usando thunk
+
       await dispatch(registerUser({ 
         firstName, 
         lastName, 
@@ -34,10 +34,10 @@ export default function RegisterForm() {
 
       toast.success("Usuario registrado correctamente");
 
-      // 2️⃣ Login automático con Redux
+
       await dispatch(loginUser({ email, password })).unwrap();
       
-      // ✅ Si llegamos aquí, todo salió bien
+
       navigate("/");
 
     } catch (err) {

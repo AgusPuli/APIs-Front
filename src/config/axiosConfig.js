@@ -1,9 +1,5 @@
 import axios from 'axios';
 
-// ============================================================
-// CONFIGURACIÓN BASE
-// ============================================================
-
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080',
   timeout: 15000,
@@ -12,9 +8,6 @@ const api = axios.create({
   },
 });
 
-// ============================================================
-// INTERCEPTOR DE REQUEST
-// ============================================================
 
 api.interceptors.request.use(
   (config) => {
@@ -48,12 +41,9 @@ api.interceptors.request.use(
   }
 );
 
-// ============================================================
-// INTERCEPTOR DE RESPONSE - MANEJO CENTRALIZADO DE ERRORES
-// ============================================================
 
 api.interceptors.response.use(
-  // ✅ Respuesta exitosa
+
   (response) => {
     // Log de responses en desarrollo
     if (import.meta.env.DEV) {
@@ -62,7 +52,7 @@ api.interceptors.response.use(
     return response;
   },
   
-  // ❌ Manejo de errores
+
   (error) => {
     // Estructura de error personalizada
     const customError = {
@@ -152,19 +142,19 @@ api.interceptors.response.use(
           customError.message = customError.message || `Error del servidor (${status})`;
       }
     } 
-    // Caso 2: Error de red (sin respuesta del servidor)
+    // Caso 2 error de red sin respuesta del servidor
     else if (error.request) {
       console.error('❌ Error de red - No se recibió respuesta del servidor');
       customError.message = 'Error de conexión. Verifica tu conexión a internet';
       customError.status = 0;
     } 
-    // Caso 3: Error al configurar la petición
+    // Caso 3 error al configurar la petición
     else {
       console.error('❌ Error al configurar la petición:', error.message);
       customError.message = error.message || 'Error al procesar la solicitud';
     }
 
-    // Log completo en desarrollo
+
     if (import.meta.env.DEV) {
       console.group('🔍 Detalles del Error');
       console.log('URL:', error.config?.url);
@@ -180,41 +170,27 @@ api.interceptors.response.use(
   }
 );
 
-// ============================================================
-// HELPERS PARA MANEJO DE ERRORES
-// ============================================================
 
-/**
- * Verifica si el error es de un tipo específico
- */
 export const isErrorType = (error, statusCode) => {
   return error?.status === statusCode;
 };
 
-/**
- * Obtiene mensaje de error legible
- */
+
 export const getErrorMessage = (error) => {
   if (typeof error === 'string') return error;
   return error?.message || 'Error desconocido';
 };
 
-/**
- * Verifica si hay un error de red
- */
+
 export const isNetworkError = (error) => {
   return error?.status === 0 || !error?.status;
 };
 
-/**
- * Verifica si el token expiró (401)
- */
+
 export const isAuthError = (error) => {
   return error?.status === 401;
 };
 
-// ============================================================
-// EXPORT DEFAULT
-// ============================================================
+
 
 export default api;

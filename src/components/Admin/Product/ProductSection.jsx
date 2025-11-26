@@ -11,7 +11,7 @@ import toast from "react-hot-toast";
 export default function ProductSection() {
   const dispatch = useDispatch();
 
-  // ✅ Redux state
+
   const { loading, error } = useSelector((state) => state.products);
 
   // Modals

@@ -7,7 +7,7 @@ import ViewOrderModal from "./ViewOrderModal";
 export default function OrderSection() {
   const dispatch = useDispatch();
   
-  // ✅ Solo necesitamos loading, orders viene de OrderTable
+
   const { loading } = useSelector((state) => state.orders);
   const [selectedOrder, setSelectedOrder] = useState(null);
 

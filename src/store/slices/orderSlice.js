@@ -1,11 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../../config/axiosConfig";
 
-// ============================================================
-// THUNKS (Acciones asíncronas)
-// ============================================================
 
-// ✅ Crear una orden usando /orders/checkout
 export const createOrder = createAsyncThunk(
   "orders/createOrder",
   async ({ userId, items, shippingData, paymentData }) => {
@@ -19,7 +15,6 @@ export const createOrder = createAsyncThunk(
           price: price,
         };
       }),
-      // ✅ Calcular total correctamente
       total: items.reduce((sum, item) => {
         const price = item.price || item.unitPrice || 0;
         const quantity = item.quantity || 0;
@@ -35,7 +30,6 @@ export const createOrder = createAsyncThunk(
 
     console.log("📦 Checkout payload:", checkoutPayload);
 
-    // ✅ CORREGIDO: Usar /orders/checkout
     const { data: order } = await api.post("/orders/checkout", checkoutPayload);
 
     console.log("✅ Order created:", order);
@@ -47,7 +41,6 @@ export const createOrder = createAsyncThunk(
 export const fetchUserOrders = createAsyncThunk(
   "orders/fetchUserOrders",
   async (_, { getState }) => {
-    // ✅ Obtener userId del estado de Redux
     const userId = getState().user?.user?.id;
     
     if (!userId) {
@@ -59,7 +52,6 @@ export const fetchUserOrders = createAsyncThunk(
   }
 );
 
-// ✅ NUEVO: Obtener TODAS las órdenes (para admin)
 export const fetchAllOrders = createAsyncThunk(
   "orders/fetchAllOrders",
   async () => {
@@ -77,7 +69,6 @@ export const fetchOrderById = createAsyncThunk(
   }
 );
 
-// ✅ NUEVO: Actualizar estado de orden (para admin)
 export const updateOrderStatus = createAsyncThunk(
   "orders/updateOrderStatus",
   async ({ orderId, status }) => {
@@ -86,9 +77,6 @@ export const updateOrderStatus = createAsyncThunk(
   }
 );
 
-// ============================================================
-// SLICE
-// ============================================================
 
 const orderSlice = createSlice({
   name: "orders",

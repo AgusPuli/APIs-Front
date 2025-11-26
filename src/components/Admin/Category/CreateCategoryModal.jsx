@@ -7,8 +7,7 @@ import toast from "react-hot-toast";
 export default function CreateCategoryModal({ onClose, onCategoryCreated }) {
   const dispatch = useDispatch();
   
-  // ✅ Tipos hardcodeados si el endpoint no funciona
-  // Si tu backend tiene estos tipos, agrégalos aquí
+
   const categoryTypes = [
     "APPLE",
     "SAMSUNG",
@@ -122,7 +121,7 @@ export default function CreateCategoryModal({ onClose, onCategoryCreated }) {
             />
           </div>
 
-          {/* Tipo (opcional) */}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Tipo (Opcional)

@@ -1,15 +1,12 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../../config/axiosConfig";
 
-// Helper
+
 const getUserId = (getState) => {
   const state = getState();
   return state.user?.user?.id || state.user?.id;
 };
 
-// ============================================================
-// ASYNC THUNKS
-// ============================================================
 
 export const fetchCart = createAsyncThunk(
   "cart/fetchCart",
@@ -132,9 +129,7 @@ export const checkoutPreview = createAsyncThunk(
   }
 );
 
-// ============================================================
-// HELPER: Actualizar carrito desde payload
-// ============================================================
+
 const updateCartFromPayload = (state, payload) => {
   state.items = payload.items;
   state.total = payload.total ?? 0;
@@ -146,9 +141,7 @@ const updateCartFromPayload = (state, payload) => {
   state.discountPercentage = payload.discountPercentage ?? 0;
 };
 
-// ============================================================
-// SLICE
-// ============================================================
+
 const cartSlice = createSlice({
   name: "cart",
   initialState: {
@@ -174,11 +167,7 @@ const cartSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    // ============================================================
-    // CASOS ESPECÍFICOS - Solo actualizan cuando es necesario
-    // ============================================================
-    
-    // FETCH CART
+
     builder
       .addCase(fetchCart.pending, (state) => {
         state.loading = true;
@@ -290,16 +279,14 @@ const cartSlice = createSlice({
         state.error = action.payload?.message || action.error.message;
       })
 
-    // ============================================================
-    // PREVIEW DISCOUNT - NO actualiza carrito, solo preview
-    // ============================================================
+
       .addCase(previewDiscount.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
       .addCase(previewDiscount.fulfilled, (state, action) => {
         state.loading = false;
-        // ✅ Solo guarda preview, NO actualiza items
+
         state.preview = action.payload;
       })
       .addCase(previewDiscount.rejected, (state, action) => {
@@ -308,16 +295,14 @@ const cartSlice = createSlice({
         state.preview = null;
       })
 
-    // ============================================================
-    // CHECKOUT PREVIEW - NO actualiza nada
-    // ============================================================
+
       .addCase(checkoutPreview.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
       .addCase(checkoutPreview.fulfilled, (state) => {
         state.loading = false;
-        // ✅ No actualiza nada, solo para validación
+
       })
       .addCase(checkoutPreview.rejected, (state, action) => {
         state.loading = false;

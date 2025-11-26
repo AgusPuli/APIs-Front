@@ -3,12 +3,9 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import useAddToCart from "../../hooks/useAddToCart";
 
-/**
- * Componente de información del producto
- * Lógica de addToCart manejada por hook
- */
+
 export default function ProductInfo({ product, canBuy: canBuyProp }) {
-  // ✅ Hook maneja toda la lógica de agregar al carrito
+
   const { addToCart, isAdmin } = useAddToCart();
   
   // Estados locales para variantes del producto
@@ -24,7 +21,7 @@ export default function ProductInfo({ product, canBuy: canBuyProp }) {
     ? canBuyProp
     : (isActive && hasStock);
 
-  // ✅ Handler simplificado - el hook maneja todo
+  //  Handler que usa hook
   const handleAddToCart = async () => {
     await addToCart(product, 1);
   };

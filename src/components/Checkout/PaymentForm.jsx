@@ -10,13 +10,13 @@ export default function PaymentForm({ data, setData, onNext, onPrev }) {
     
     let newValue = value;
     
-    // Formatear número de tarjeta (espacios cada 4 dígitos)
+
     if (name === "cardNumber") {
       newValue = value.replace(/\s/g, "").replace(/(.{4})/g, "$1 ").trim();
       newValue = newValue.slice(0, 19); // Máximo 16 dígitos + 3 espacios
     }
     
-    // Formatear fecha de expiración (MM/AA)
+
     if (name === "expiryDate") {
       newValue = value.replace(/\D/g, "");
       if (newValue.length >= 2) {
@@ -25,7 +25,7 @@ export default function PaymentForm({ data, setData, onNext, onPrev }) {
       newValue = newValue.slice(0, 5);
     }
     
-    // Solo números en CVV
+
     if (name === "cvv") {
       newValue = value.replace(/\D/g, "").slice(0, 4);
     }
@@ -36,7 +36,7 @@ export default function PaymentForm({ data, setData, onNext, onPrev }) {
     }));
   };
 
-  // Detectar tipo de tarjeta
+
   const getCardType = () => {
     const number = data.cardNumber.replace(/\s/g, "");
     if (number.startsWith("4")) return "visa";

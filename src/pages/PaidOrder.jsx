@@ -55,7 +55,6 @@ export default function PaidOrder() {
       minimumFractionDigits: 2,
     }).format(Number.isFinite(n) ? n : 0);
 
-  // Normalización de items (Mantenida igual)
   const items = order
     ? order.items ?? order.orderItems ?? order.products ?? []
     : [];

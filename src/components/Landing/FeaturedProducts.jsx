@@ -6,15 +6,15 @@ import { Link } from "react-router-dom";
 
 export default function FeaturedProducts() {
   const dispatch = useDispatch();
-  
-  // ✅ Obtener productos de Redux
+
+
   const { list: allProducts, loading } = useSelector((state) => state.products);
 
   useEffect(() => {
     dispatch(fetchProducts());
   }, [dispatch]);
 
-  // Filtrar solo los primeros 3 productos activos
+
   const featuredProducts = (allProducts || [])
     .filter(p => p.active && p.stock > 0)
     .slice(0, 3);

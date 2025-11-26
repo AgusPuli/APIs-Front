@@ -6,13 +6,11 @@ import { fetchUserOrders } from "../store/slices/orderSlice";
 export default function OrdersPage() {
   const dispatch = useDispatch();
   
-  // ✅ Leer del store de Redux
   const { list: orders, loading } = useSelector((state) => state.orders);
   const { user } = useSelector((state) => state.user);
 
   useEffect(() => {
     if (user) {
-      // ✅ Dispatch del thunk
       dispatch(fetchUserOrders());
     }
   }, [dispatch, user]);

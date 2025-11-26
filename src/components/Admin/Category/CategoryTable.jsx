@@ -3,7 +3,7 @@ import { useSelector } from "react-redux";
 import CategoryRow from "./CategoryRow";
 
 export default function CategoryTable({ onEdit, onDelete }) {
-  // ✅ Obtener categorías directamente de Redux
+
   const { list: categories, loading } = useSelector((state) => state.categories);
 
   if (loading) {

@@ -8,7 +8,7 @@ export default function ContactInfo() {
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "", 
   });
 
-  // Ubicación personalizada (latitud y longitud)
+
   const position = { lat: -34.6037, lng: -58.3816 }; // Buenos Aires
 
   return (
