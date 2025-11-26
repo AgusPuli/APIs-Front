@@ -88,21 +88,6 @@ export default function Header({
               </button>
             </div>
           </div>
-
-          {/* SearchBar (solo en /products) */}
-          {showSearch && (
-            <div className="py-4">
-              <SearchBar
-                searchQuery={searchQuery}
-                setSearchQuery={setSearchQuery}
-                selectedCategory={selectedCategory}
-                setSelectedCategory={setSelectedCategory}
-                selectedSubcategory={selectedSubcategory}
-                setSelectedSubcategory={setSelectedSubcategory}
-                products={products}
-              />
-            </div>
-          )}
         </div>
       </div>
 
